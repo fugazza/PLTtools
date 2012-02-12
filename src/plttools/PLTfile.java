@@ -5,6 +5,7 @@
 package plttools;
 
 import java.io.*;
+import java.text.DecimalFormat;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -18,14 +19,14 @@ public class PLTfile {
     private StringBuilder rawPLT;
     private int max_x = 0;
     private int max_y = 0;
-    private int last_x = 0;
-    private int last_y = 0;
-    private int pens[], x1[], y1[], x2[], y2[], status[];
+    private int point_x[], point_y[], lines_at_point[];
+    private int lines_1[], lines_2[], pens[], status[];
+    private float distances[][];
     private int pocetCar = 0;
     private int pocetPrejezdu = 0;
+    private int pocetBodu = 0;
     private double delkaCar = 0.0;
     private double delkaPrejezdu = 0.0;
-    private int pen = 0;
     
     public static PLTfile readPLTfromFile(File file) {
         BufferedReader reader = null;
@@ -87,13 +88,24 @@ public class PLTfile {
         
         
         // teď teprve získat jednotlivé hodnoty
-        int x2a, y2a, i = 0;
         pens = new int[pocetCar];
-        x1 = new int[pocetCar];
-        y1 = new int[pocetCar];
-        x2 = new int[pocetCar];
-        y2 = new int[pocetCar];
+        lines_1 = new int[pocetCar];
+        lines_2 = new int[pocetCar];
         status = new int[pocetCar];
+        point_x = new int[2*pocetCar+1];
+        point_y = new int[2*pocetCar+1];
+        lines_at_point = new int[2*pocetCar+1];
+        int x2a;
+        int y2a;
+        int i = 0;
+        int firstPoint = getPointId(0,0,true);
+        int point_id;
+        int pen = 0;
+        int lastX = 0, lastY = 0;
+        
+        for (int j=0; j<2*pocetCar+1; j++) {
+            lines_at_point[j] = 0;
+        }
         
         penUp = true;
         StringTokenizer st = new StringTokenizer(rawPLT.toString(),";");
@@ -106,16 +118,10 @@ public class PLTfile {
                 while (st2.hasMoreTokens()) {
                     x2a = Integer.parseInt(st2.nextToken());
                     y2a = Integer.parseInt(st2.nextToken());
-
-                    delkaPrejezdu += Math.sqrt(Math.pow(x2a - last_x, 2) + Math.pow(y2a - last_y, 2));
-                    if (x2a > max_x) {
-                        max_x = x2a;
-                    }
-                    if (y2a > max_y) {
-                        max_y = y2a;
-                    }
-                    last_x = x2a;
-                    last_y = y2a;
+                    
+                    delkaPrejezdu += Math.sqrt(Math.pow(x2a - lastX, 2) + Math.pow(y2a - lastY, 2));
+                    lastX = x2a;
+                    lastY = y2a;
                 }
                 penUp = true;
             } else if (prikaz.equals("PU")) {
@@ -126,21 +132,16 @@ public class PLTfile {
                 while (st2.hasMoreTokens()) {
                     x2a = Integer.parseInt(st2.nextToken());
                     y2a = Integer.parseInt(st2.nextToken());
-                    
+                    firstPoint = getPointId(lastX, lastY, true);
+                    point_id = getPointId(x2a, y2a, true);
                     pens[i] = pen;
-                    x1[i] = last_x;
-                    y1[i] = last_y;
-                    x2[i] = x2a;
-                    y2[i] = y2a;
-                    delkaCar += Math.sqrt(Math.pow(x2a - last_x, 2) + Math.pow(y2a - last_y, 2));
-                    if (x2a > max_x) {
-                        max_x = x2a;
-                    }
-                    if (y2a > max_y) {
-                        max_y = y2a;
-                    }
-                    last_x = x2a;
-                    last_y = y2a;
+                    lines_1[i] = firstPoint;
+                    lines_2[i] = point_id;
+                    lines_at_point[point_id]++;
+                    lines_at_point[firstPoint]++;
+                    delkaCar += Math.sqrt(Math.pow(x2a - lastX, 2) + Math.pow(y2a - lastY, 2));
+                    lastX = x2a;
+                    lastY = y2a;
                     i++;
                 }
                 penUp = false;
@@ -154,13 +155,39 @@ public class PLTfile {
                 }
             }
         }
-        
+
+        calculateDistances();
         for (int k=0; k < pocetCar; k++) {
             if (status[k] <= 0) {
                 status[k] = checkStatus(k);
-                //pens[k] = status[k];
             }
 //            System.out.println("status of " + k + " = "+status[k]+"; pen = " +pens[k]);
+        }
+//        System.out.println("počet bodů = " + pocetBodu);
+//        for (int l=0; l<25; l++) {
+//            System.out.println("line "+l+": from "+lines_1[l]+"["+point_x[lines_1[l]]+","+point_y[lines_1[l]]+"] to "+lines_2[l]+"["+point_x[lines_2[l]]+","+point_y[lines_2[l]]+"]");
+//        }
+    }
+    
+    private int getPointId(int x, int y, boolean createNew) {
+//        for (int i=0; i < 2*pocetCar+1; i++) {
+//            if (point_x[i] == x && point_y[i] == y) {
+//                return i;
+//            }
+//        }
+        if (createNew) {
+            if (x > max_x) {
+                max_x = x;
+            }
+            if (y > max_y) {
+                max_y = y;
+            }
+            point_x[pocetBodu] = x;
+            point_y[pocetBodu] = y;
+            pocetBodu++;
+            return pocetBodu - 1;
+        } else {
+            return -1;
         }
     }
     
@@ -176,99 +203,71 @@ public class PLTfile {
      * @return status
      */
     private int checkStatus(int index) {
-        if (status[index] > 0) {
-            if (status[index]==4) {
-                status[index]=3;
-            }
-            return status[index];
-        }
-        int countOn1 = 0, countOn2 = 0;
-        int indexOn1 = -1, indexOn2 = -1;
-        for (int k=0; k < pocetCar; k++) {
-            if (k==index) {
-                continue;
-            } else {
-                if (x1[k] == x1[index] && y1[k] == y1[index]) {
-                    countOn1++;
-                    indexOn1 = k;
-                } else if (x2[k] == x1[index] && y2[k] == y1[index]) {                
-                    countOn1++;
-                    indexOn1 = k;
-                }            
-                if (x1[k] == x2[index] && y1[k] == y2[index]) {
-                    countOn2++;
-                    indexOn2 = k;
-                } else if (x2[k] == x2[index] && y2[k] == y2[index]) {                
-                    countOn2++;
-                    indexOn2 = k;
-                }      
-            }
-        }        
-        if (countOn1==1 && countOn2==1) {
-            if (findLoop(x1[index],y1[index],index,index)) {
+        
+        int countOn1 = lines_at_point[lines_1[index]];
+        int countOn2 = lines_at_point[lines_2[index]];
+        if (countOn1==2 && countOn2==2) {
+            if (findLoop(index)) {
                 return 3;
             } else {
                 return 4;                        
             }
         }
-        if (countOn1!=1 && countOn2!=1) {
+        if (countOn1!=2 && countOn2!=2) {
             return 5;
         }
-        if (countOn1==1 && countOn2!=1) {
+        if (countOn1==2 && countOn2!=2) {
             return 2;
         }
-        if (countOn1!=1 && countOn2==1) {
+        if (countOn1!=2 && countOn2==2) {
             return 1;
         }
         return 6;
     }
 
     
-    private boolean findLoop(int x, int y, int k, int startIndex) {
-        int x2a = x, y2a = y, ka = k;
-        int tempX = 0, tempY = 0, tempK = 0;
+    private boolean findLoop(int startIndex) {
+        int foundPoint = lines_1[startIndex];
+        int x2a;
+        int y2a;
+        int ka = startIndex;
+        int numAt1;
+        int numAt2;
         boolean hledatDalsi = true;
+        if (lines_at_point[lines_1[startIndex]]<2) {
+            return false;
+        }
         while (hledatDalsi) {
-            int nalezeno = -1;
+            x2a = point_x[foundPoint];
+            y2a = point_y[foundPoint];
             hledatDalsi = false;
-            boolean nalezenoVice = false;
             for (int i=0; i<pocetCar; i++) {
                 if (i!=ka) {
-                    if (x1[i]==x2a && y1[i]==y2a) {
-                        if (nalezeno!=-1) {
-                            nalezenoVice = true;
-                            hledatDalsi = false;
-                            break;
+                    if (point_x[lines_1[i]]==x2a && point_y[lines_1[i]]==y2a) {
+                        numAt2 = lines_at_point[lines_2[i]];
+                        if (numAt2 != 2) {
+                            return false;
                         } else {
-                            nalezeno = i;
-                            tempX = x2[i];
-                            tempY = y2[i];
-                            tempK = i;
+                            foundPoint = lines_2[i];
+                            ka = i;
                             hledatDalsi = true;
+                            break;
                         }
                     }
-                    if (x2[i]==x2a && y2[i]==y2a) {
-                        if (nalezeno!=-1) {
-                            nalezenoVice = true;
-                            hledatDalsi = false;
-                            break;
+                    if (point_x[lines_2[i]]==x2a && point_y[lines_2[i]]==y2a) {
+                        numAt1 = lines_at_point[lines_1[i]];
+                        if (numAt1 != 2) {
+                            return false;
                         } else {
-                            nalezeno = i;
-                            tempX = x1[i];
-                            tempY = y1[i];
-                            tempK = i;
+                            foundPoint = lines_1[i];
+                            ka = i;
                             hledatDalsi = true;
+                            break;
                         }
                     }
                 }
             }
-            if (hledatDalsi) {
-                x2a = tempX;
-                y2a = tempY;
-                ka = tempK;                
-            }
-            //System.out.println("nalezeno = " + nalezeno + "; startIndex = "+startIndex);
-            if (!nalezenoVice && (nalezeno == startIndex || (nalezeno!= -1 && status[nalezeno] == 3))) {
+            if (ka == startIndex || status[ka] == 3) {
                 return true;
             }
         }
@@ -276,19 +275,256 @@ public class PLTfile {
     } 
     
     public PLTfile getOptimizedPLT() {
-        PLTfile p = new PLTfile();
-        p.pocetCar = pocetCar;
-        p.pocetPrejezdu = pocetPrejezdu;
-        p.max_x = max_x;
-        p.max_y = max_y;
-        p.pens = new int[pocetCar];
-        p.x1 = new int[pocetCar];
-        p.y1 = new int[pocetCar];
-        p.x2 = new int[pocetCar];
-        p.y2 = new int[pocetCar];
-        p.status = new int[pocetCar];
+        int alghoritm = 3;
+        switch(alghoritm) {
+            case 3:
+                return optimizationAntColony();
+            case 2:
+                return optimizationGreedy();
+            case 1:
+            default:
+                return optimizationGreedyModified();
+        }
+    }
+    
+    private PLTfile optimizationAntColony() {
+        System.out.println("optimization started");
+        PLTfile p = (PLTfile) clone();
+        calculateDistances();
+        System.out.println("distances calculated");
+        int numProcessed;
+        int numLinesProcessed = 0;
+        double maxAttractivity;
+        boolean linesProcessed[] = new boolean[pocetCar];
+        int antPath[] = new int[pocetBodu];
+        double antPathLength;
+        float attractivity[][] = new float[pocetBodu][pocetBodu];
+        System.out.println("attractivity array allocated");
+        float pheromones[][] = new float[pocetBodu][pocetBodu];
+        System.out.println("pheromones array allocated");
+        for (int i=0; i<pocetBodu;i++) {
+            for (int j=i+1; j<pocetBodu;j++) {
+                pheromones[i][j] = 1.0f;
+                pheromones[j][i] = 1.0f;
+            }
+        }
+
+        float attract;
+        int i, j, k;
+        int lastPoint;
+        int antsCount = 30;
+        for (k=0; k<antsCount; k++) {
+            if (k==(antsCount-1)) {
+                lastPoint = 0;
+            } else {
+                lastPoint = (int) (Math.random()*pocetBodu);
+            }
+            System.out.println("Ant "+k+"; startpoint = "+lastPoint);
+            int nextPoint = 0;
+            boolean processed[] = new boolean[pocetBodu];
+            processed[lastPoint] = true;
+            // generate attractivity matrix
+            float vahaVzdalenost = 1.0f;
+            float vahaFeromon = 2.0f;
+            float vahaNahoda = 1.0f;
+            for (i=0; i<pocetBodu;i++) {
+                for (j=i+1; j<pocetBodu;j++) {
+                    if (distances[i][j] == 0) {
+                        attract = 1;
+                    } else if (distances[i][j] == -1) {
+                        attract = 10;
+                    } else if (k==(antsCount-1)) {
+                        attract = (float) (Math.pow(1/distances[i][j],vahaVzdalenost) * Math.pow(pheromones[i][j],vahaFeromon));
+                    } else {
+                        attract = (float) (Math.pow(1/distances[i][j],vahaVzdalenost) * Math.pow(pheromones[i][j],vahaFeromon) * Math.pow(Math.random()*1.0 + 0.5,vahaNahoda));
+                    }
+                    attractivity[i][j] = attract;
+                    attractivity[j][i] = attract;
+                }
+            }
+            // generate ant path
+            numProcessed = 0;
+            while (numProcessed < pocetBodu) {
+                maxAttractivity = 0;
+                for(i=0; i<pocetBodu; i++) {
+                    if (i!=lastPoint && !processed[i] && attractivity[lastPoint][i]>maxAttractivity) {
+                        nextPoint = i;
+                        maxAttractivity = attractivity[lastPoint][nextPoint];
+                    }
+                }
+                processed[nextPoint] = true;
+                antPath[numProcessed] = nextPoint;
+                lastPoint = nextPoint;
+                numProcessed++;
+            }
+            // calculate path length
+            antPathLength = 0.0;
+            for (i=1; i<pocetBodu; i++) {
+                antPathLength += distances[antPath[i]][antPath[i-1]];
+            }
+            System.out.println("ant path length = "+antPathLength);
+            
+            // update pheromones
+            float pheromone;
+            for (i=0; i<pocetBodu;i++) {
+                for (j=i+1; j<pocetBodu;j++) {
+                    pheromone = 0.9f*pheromones[i][j];
+                    pheromones[i][j] = pheromone;
+                    pheromones[j][i] = pheromone;
+                }
+            }
+            System.out.println("pheromone increase = " + 20000.0f/antPathLength);
+            int r,s;
+            for (i=1; i<pocetBodu; i++) {
+                r = antPath[i];
+                s = antPath[i-1];
+                pheromone = (float) (pheromones[r][s] + 20000.0f/antPathLength);
+                pheromones[r][s] = pheromone;
+                pheromones[s][r] = pheromone;
+            }
+        }
+        for (i=1; i<pocetBodu; i++) {
+            for(j=0; j<pocetCar; j++) {
+                if (lines_1[j] == antPath[i-1] && lines_2[j] == antPath[i]) {
+                    p.lines_1[numLinesProcessed] = lines_1[j];
+                    p.lines_2[numLinesProcessed] = lines_2[j];
+                    p.pens[numLinesProcessed] = pens[j];
+                    p.status[numLinesProcessed] = status[j];
+                    linesProcessed[j] = true; 
+                    numLinesProcessed++;
+                    break;
+                } else if (lines_2[j] == antPath[i-1] && lines_1[j] == antPath[i]) {
+                    p.lines_1[numLinesProcessed] = lines_2[j];
+                    p.lines_2[numLinesProcessed] = lines_1[j];
+                    p.pens[numLinesProcessed] = pens[j];
+                    p.status[numLinesProcessed] = status[j];
+                    linesProcessed[j] = true;                    
+                    numLinesProcessed++;
+                    break;
+                }         
+            }
+        }
+        p.calculatePathLengths();
+        return p;
+    }
+
+    private PLTfile optimizationGreedy() {
+        PLTfile p = (PLTfile) clone();
+        calculateDistances();
+        int numProcessed = 0;
+        int numLinesProcessed = 0;
+        int lastPoint = 0;
+        int minPoint = 0;
+        double minDist;
+        boolean processed[] = new boolean[pocetBodu];
+        processed[0] = true;
+        boolean linesProcessed[] = new boolean[pocetCar];
+        int i, j;
+        while (numProcessed < pocetBodu) {
+//            System.out.println("last point: "+lastPoint+"["+point_x[lastPoint]+","+point_y[lastPoint]+"]");
+            minDist = 2*(max_x+max_y);
+            for(i=0; i<pocetBodu; i++) {
+                if (!processed[i] && distances[lastPoint][i]<minDist) {
+                    minPoint = i;
+                    minDist = distances[lastPoint][minPoint];
+                }
+            }
+            numProcessed++;
+            processed[minPoint] = true;
+            for(j=0; j<pocetCar; j++) {
+                if (lines_1[j] == lastPoint && lines_2[j] == minPoint) {
+                    p.lines_1[numLinesProcessed] = lines_1[j];
+                    p.lines_2[numLinesProcessed] = lines_2[j];
+                    p.pens[numLinesProcessed] = pens[j];
+                    p.status[numLinesProcessed] = status[j];
+                    linesProcessed[j] = true; 
+                    numLinesProcessed++;
+                    break;
+                }
+                if (lines_2[j] == lastPoint && lines_1[j] == minPoint) {
+                    p.lines_1[numLinesProcessed] = lines_2[j];
+                    p.lines_2[numLinesProcessed] = lines_1[j];
+                    p.pens[numLinesProcessed] = pens[j];
+                    p.status[numLinesProcessed] = status[j];
+                    linesProcessed[j] = true;                    
+                    numLinesProcessed++;
+                    break;
+                }            
+            }
+//            System.out.println("processed lines: " + numLinesProcessed);
+            lastPoint = minPoint;
+        }
+//        System.out.println("total lines = "+pocetCar + "; zpracovano = "+numLinesProcessed);
+        p.calculatePathLengths();
+        return p;
+    }
+    
+    private void calculateDistances() {
+        float dx, dy;
+        float dist;
+        distances = new float[pocetBodu][pocetBodu];
+        int i, j, k;
+        for (i=0; i<pocetBodu; i++) {
+            distances[i][i] = 2*(max_x+max_y);
+            for (j=i+1; j<pocetBodu; j++) {
+                dx = point_x[i] - point_x[j];
+                dy = point_y[i] - point_y[j];
+                dist = (float) Math.sqrt(dx*dx + dy*dy);
+                distances[i][j] = dist;
+                distances[j][i] = dist;
+            }
+        }
+        // set distance of points, that are common for just two lines to bad value
+        int zeroDistCount;
+        for (i=0; i<pocetBodu; i++) {
+            zeroDistCount = 0;
+            for (j=0; j<pocetBodu; j++) {
+                if (distances[i][j]==0) {
+                    zeroDistCount++;    
+                }
+            }
+            lines_at_point[i] = zeroDistCount+1;
+        }
+        for (i=0; i<pocetBodu; i++) {
+            if (lines_at_point[i]==2) {
+                k = -1;
+                for (k=0; k<pocetCar; k++) {
+                    if (lines_1[k]==i || lines_2[k]==i) {
+                        break;
+                    }
+                }
+//                if (i==1272) {
+//                    System.out.println("is loop = "+findLoop(k)+"; k = "+k);
+//                }
+                if (!findLoop(k)) {
+                    for (j=0; j<pocetBodu; j++) {
+                        if (distances[i][j]!= 0) {
+                            distances[i][j] = 2*(max_x+max_y);
+                            distances[j][i] = 2*(max_x+max_y);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // set distance of all connected points best value
+        for (i=0; i<pocetCar; i++) {
+            distances[lines_1[i]][lines_2[i]] = -1.0f;
+            distances[lines_2[i]][lines_1[i]] = -1.0f;
+        }
+        System.gc();
+//        DecimalFormat format = new DecimalFormat("#####");
+//        for (i=1260; i<1280; i++) {
+//            for (j=1260; j<1280; j++) {
+//                System.out.print(format.format(distances[i][j]) + "\t");
+//            }
+//            System.out.println();
+//        }
+    }
+    
+    private PLTfile optimizationGreedyModified() {
+        PLTfile p = (PLTfile) clone();
         boolean processed[] = new boolean[pocetCar];
-        p.rawPLT = rawPLT;
         int numProcessed = 0;
         int lastX2 = 0, lastY2 = 0, lastPen = -1;
         int range = 0;
@@ -310,10 +546,10 @@ public class PLTfile {
 //                    if (processed[j]) {
                         continue;
                     }
-                    vzdalenost1x = Math.abs(x1[j] - lastX2);
-                    vzdalenost1y = Math.abs(y1[j] - lastY2);
-                    vzdalenost2x = Math.abs(x2[j] - lastX2);
-                    vzdalenost2y = Math.abs(y2[j] - lastY2);
+                    vzdalenost1x = Math.abs(point_x[lines_1[j]] - lastX2);
+                    vzdalenost1y = Math.abs(point_y[lines_1[j]] - lastY2);
+                    vzdalenost2x = Math.abs(point_x[lines_2[j]] - lastX2);
+                    vzdalenost2y = Math.abs(point_y[lines_2[j]] - lastY2);
                     vzdalenost1 = (int) Math.sqrt(vzdalenost1x*vzdalenost1x + vzdalenost1y*vzdalenost1y);
                     vzdalenost2 = (int) Math.sqrt(vzdalenost2x*vzdalenost2x + vzdalenost2y*vzdalenost2y);
 //                    if ((Math.sqrt(1.0*Math.pow(x1[j] - lastX2,2) + Math.pow(y1[j] - lastY2,2)) <= range)
@@ -323,18 +559,14 @@ public class PLTfile {
                             && (!findLineStart || status[j]!=4))) {
                         
                         if (vzdalenost1==0 || (vzdalenost2!=0 && ((status[j]==1) || (vzdalenost1<=vzdalenost2 && status[j]!=2)))) {
-                            p.x1[numProcessed] = x1[j];
-                            p.y1[numProcessed] = y1[j];
-                            p.x2[numProcessed] = x2[j];
-                            p.y2[numProcessed] = y2[j];                            
+                            p.lines_1[numProcessed] = lines_1[j];
+                            p.lines_2[numProcessed] = lines_2[j];
                         } else {
-                            p.x1[numProcessed] = x2[j];
-                            p.y1[numProcessed] = y2[j];
-                            p.x2[numProcessed] = x1[j];
-                            p.y2[numProcessed] = y1[j];
+                            p.lines_1[numProcessed] = lines_2[j];
+                            p.lines_2[numProcessed] = lines_1[j];
                         }
-                        lastX2 = p.x2[numProcessed];
-                        lastY2 = p.y2[numProcessed];                            
+                        lastX2 = point_x[p.lines_2[numProcessed]];
+                        lastY2 = point_y[p.lines_2[numProcessed]];
                         
                         p.pens[numProcessed] = pens[j];
                         p.status[numProcessed] = status[j];
@@ -366,23 +598,29 @@ public class PLTfile {
             }
         }
         
-        if (p.x1[0] !=0 || p.y1[0] != 0) {
-            p.pocetPrejezdu = 1;
-            p.delkaPrejezdu = Math.sqrt(Math.pow(p.x1[0],2) + Math.pow(p.y1[0],2));
-        } else {
-            p.pocetPrejezdu = 0;
-        }
-        p.delkaCar = Math.sqrt(Math.pow(p.x2[0] - p.x1[0],2) + Math.pow(p.y2[0]-p.y1[0],2));
-        for (int i=1; i<pocetCar; i++) {
-            p.delkaCar += Math.sqrt(Math.pow(p.x2[i] - p.x1[i],2) + Math.pow(p.y2[i]-p.y1[i],2));
-            if (p.x1[i] != p.x2[i-1] || p.y1[i] != p.y2[i-1]) {
-                p.pocetPrejezdu++;
-                p.delkaPrejezdu += Math.sqrt(Math.pow(p.x1[i]-p.x2[i-1],2) + Math.pow(p.y1[i]-p.y2[i-1],2));
-            }
-        }
+        p.calculatePathLengths();
         return p;
     }
 
+    private void calculatePathLengths() {
+        int lastPoint = 0;
+        int lastX2 = 0;
+        int lastY2 = 0;
+        delkaCar = 0;
+        pocetPrejezdu = 0;
+        delkaPrejezdu = 0;
+        for (int i=0; i<pocetCar; i++) {
+            delkaCar += Math.sqrt(Math.pow(point_x[lines_2[i]] - point_x[lines_1[i]],2) + Math.pow(point_y[lines_2[i]]-point_y[lines_1[i]],2));
+            if (point_x[lines_1[i]] != point_x[lastPoint] || point_y[lines_1[i]] != point_y[lastPoint]) {
+                pocetPrejezdu++;
+                delkaPrejezdu += Math.sqrt(Math.pow(point_x[lines_1[i]]-lastX2,2) + Math.pow(point_y[lines_1[i]]-lastY2,2));
+            }
+            lastPoint = lines_2[i];
+            lastX2 = point_x[lastPoint];
+            lastY2 = point_y[lastPoint];
+        }        
+    }
+    
     public void saveToFile(File file) {
         PrintWriter bw = null;
         try {
@@ -394,13 +632,13 @@ public class PLTfile {
                     bw.write(";SP"+pens[i]);
                     lastPen = pens[i];
                 }
-                if (x1[i]!=lastX || y1[i]!=lastY) {
-                    bw.write(";PUPA"+x1[i]+","+y1[i]+";PDPA"+x2[i]+","+y2[i]);
+                if (point_x[lines_1[i]]!=lastX || point_y[lines_1[i]]!=lastY) {
+                    bw.write(";PUPA"+point_x[lines_1[i]]+","+point_y[lines_1[i]]+";PDPA"+point_x[lines_2[i]]+","+point_y[lines_2[i]]);
                 } else {
-                    bw.write(","+x2[i]+","+y2[i]);
+                    bw.write(","+point_x[lines_2[i]]+","+point_y[lines_2[i]]);
                 }          
-                lastX = x2[i];
-                lastY = y2[i];
+                lastX = point_x[lines_2[i]];
+                lastY = point_y[lines_2[i]];
             }
             bw.write(";PU;PA0,0;SP;");
         } catch (IOException ex) {
@@ -420,22 +658,6 @@ public class PLTfile {
 
     public int[] getPens() {
         return pens;
-    }
-
-    public int[] getX1() {
-        return x1;
-    }
-
-    public int[] getY1() {
-        return y1;
-    }
-
-    public int[] getX2() {
-        return x2;
-    }
-
-    public int[] getY2() {
-        return y2;
     }
 
     public double getDelkaCar() {
@@ -464,6 +686,46 @@ public class PLTfile {
 
     public int[] getStatus() {
         return status;
+    }
+
+    public int[] getLines_1() {
+        return lines_1;
+    }
+
+    public int[] getLines_2() {
+        return lines_2;
+    }
+
+    public int[] getPoint_x() {
+        return point_x;
+    }
+
+    public int[] getPoint_y() {
+        return point_y;
+    }
+
+    @Override
+    protected Object clone() {
+        PLTfile p = new PLTfile();
+        p.rawPLT = rawPLT;
+        p.point_x = new int[2*pocetCar+1];
+        p.point_y = new int[2*pocetCar+1];
+        p.lines_at_point = new int[2*pocetCar+1];
+        for (int i=0; i<2*pocetCar+1; i++) {
+            p.point_x[i] = point_x[i];
+            p.point_y[i] = point_y[i];
+            p.lines_at_point[i] = lines_at_point[i];
+        }
+        p.pocetCar = pocetCar;
+        p.pocetBodu = pocetBodu;
+        p.max_x = max_x;
+        p.max_y = max_y;
+        p.pens = new int[pocetCar];
+        p.lines_1 = new int[pocetCar];
+        p.lines_2 = new int[pocetCar];
+        p.status = new int[pocetCar];
+        
+        return p;
     }
         
 }
