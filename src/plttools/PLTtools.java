@@ -4,24 +4,44 @@
  */
 package plttools;
 
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.io.File;
-import javax.swing.GroupLayout;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import javax.swing.JFileChooser;
+import javax.swing.SwingWorker;
+import javax.swing.filechooser.FileFilter;
 
 /**
  *
  * @author Vláďa
  */
-public class PLTtools extends javax.swing.JFrame {
+public class PLTtools extends javax.swing.JFrame implements PropertyChangeListener {
 
-    PLTfile pltFile;
+    PLTfile pltFile = new PLTfile();
+    ExecutorService executorService;
     
     /**
      * Creates new form PLTtools
      */
     public PLTtools() {
         initComponents();
-        GroupLayout layout = (GroupLayout) getContentPane().getLayout();
+        jFileChooser1.setFileFilter(new FileFilter() {
+
+            @Override
+            public boolean accept(File pathname) {
+                return pathname.isDirectory() || pathname.getName().toLowerCase().endsWith(".plt");
+            }
+
+            @Override
+            public String getDescription() {
+                return "*.plt (Hewlett-Packard Graphics Language plot file)";
+            }
+            
+        });   
+        pltFile.addPropertyChangeListener(PLTtools.this);
+        executorService = Executors.newSingleThreadExecutor();
     }
 
     /** This method is called from within the constructor to
@@ -36,11 +56,12 @@ public class PLTtools extends javax.swing.JFrame {
         jFileChooser1 = new javax.swing.JFileChooser();
         jButton1 = new javax.swing.JButton();
         pLTpanel1 = new plttools.PLTpanel();
-        jLabel1 = new javax.swing.JLabel();
         jButton2 = new javax.swing.JButton();
         jButton3 = new javax.swing.JButton();
         jCheckBox1 = new javax.swing.JCheckBox();
         jCheckBox2 = new javax.swing.JCheckBox();
+        jLabel1 = new javax.swing.JLabel();
+        jProgressBar1 = new javax.swing.JProgressBar();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("PLT tools");
@@ -58,14 +79,12 @@ public class PLTtools extends javax.swing.JFrame {
         pLTpanel1.setLayout(pLTpanel1Layout);
         pLTpanel1Layout.setHorizontalGroup(
             pLTpanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 0, Short.MAX_VALUE)
+            .addGap(0, 421, Short.MAX_VALUE)
         );
         pLTpanel1Layout.setVerticalGroup(
             pLTpanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 274, Short.MAX_VALUE)
+            .addGap(0, 278, Short.MAX_VALUE)
         );
-
-        jLabel1.setText("PLT info:");
 
         jButton2.setText("Optimize");
         jButton2.addActionListener(new java.awt.event.ActionListener() {
@@ -96,6 +115,11 @@ public class PLTtools extends javax.swing.JFrame {
             }
         });
 
+        jLabel1.setText("PLT info:");
+
+        jProgressBar1.setString("Ready");
+        jProgressBar1.setStringPainted(true);
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -115,7 +139,8 @@ public class PLTtools extends javax.swing.JFrame {
                         .addComponent(jCheckBox1)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(jCheckBox2)
-                        .addGap(0, 26, Short.MAX_VALUE)))
+                        .addGap(0, 0, Short.MAX_VALUE))
+                    .addComponent(jProgressBar1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap())
         );
         layout.setVerticalGroup(
@@ -132,6 +157,8 @@ public class PLTtools extends javax.swing.JFrame {
                 .addComponent(pLTpanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jLabel1)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jProgressBar1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
         );
 
@@ -139,23 +166,51 @@ public class PLTtools extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-//        int result = jFileChooser1.showOpenDialog(this);
-//        if (result == JFileChooser.APPROVE_OPTION) {
-//            setTitle(jFileChooser1.getSelectedFile().getName()+" - PLT tools");
-//            pltFile = PLTfile.readPLTfromFile(jFileChooser1.getSelectedFile());
-//            jLabel1.setText("PLT info: čar " + pltFile.getPocetCar() + " (délka " + Math.round(pltFile.getDelkaCar()) + "); přejezdů " + pltFile.getPocetPrejezdu() + " (délka " + Math.round(pltFile.getDelkaPrejezdu()) + ")");
-//            pLTpanel1.setPlt(pltFile);
-//        }
-            pltFile = PLTfile.readPLTfromFile(new File("G:/inova/stitky/13636.plt"));
-            jLabel1.setText("PLT info: čar " + pltFile.getPocetCar() + " (délka " + Math.round(pltFile.getDelkaCar()) + "); přejezdů " + pltFile.getPocetPrejezdu() + " (délka " + Math.round(pltFile.getDelkaPrejezdu()) + ")");
-            pLTpanel1.setPlt(pltFile);
+        int result = jFileChooser1.showOpenDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            setTitle(jFileChooser1.getSelectedFile().getName()+" - PLT tools");
+            SwingWorker sw = new SwingWorker<Void, Void>() {
+
+                @Override
+                protected Void doInBackground() throws Exception {
+                    pltFile.readPLTfromFile(jFileChooser1.getSelectedFile());
+                    return null;
+                }
+                
+            };
+            executorService.submit(sw);            
+        }
+//        SwingWorker sw = new SwingWorker<Void, Void>() {
+//            @Override
+//            protected Void doInBackground() throws Exception {
+//                System.out.println("reader: Swing worker started.");
+//                pltFile.readPLTfromFile(new File("G:/inova/stitky/13636.plt"));
+//                System.out.println("reader: Swing worker finished.");
+//                return null;
+//            }
+//        };
+//        executorService.submit(sw);            
+
     }//GEN-LAST:event_jButton1ActionPerformed
 
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
         if (pltFile != null) {
-            pltFile = pltFile.getOptimizedPLT();
-            pLTpanel1.setPlt(pltFile);            
-            jLabel1.setText("PLT info: čar " + pltFile.getPocetCar() + " (délka " + Math.round(pltFile.getDelkaCar()) + "); přejezdů " + pltFile.getPocetPrejezdu() + " (délka " + Math.round(pltFile.getDelkaPrejezdu()) + ")");
+            SwingWorker sw = new SwingWorker<Void, Void>() {
+
+                @Override
+                protected Void doInBackground() throws Exception {
+                    pltFile.optimizePLT();
+                    return null;
+                }
+
+                @Override
+                protected void done() {
+                    pltFile = pltFile.getOptimizedPLT();
+                    pltFile.addPropertyChangeListener(PLTtools.this);
+                    pLTpanel1.setPlt(pltFile);            
+                    jLabel1.setText("PLT info: čar " + pltFile.getPocetCar() + " (délka " + Math.round(pltFile.getDelkaCar()) + "); přejezdů " + pltFile.getPocetPrejezdu() + " (délka " + Math.round(pltFile.getDelkaPrejezdu()) + ")");
+                }};      
+            executorService.submit(sw);
         }
     }//GEN-LAST:event_jButton2ActionPerformed
 
@@ -175,6 +230,22 @@ public class PLTtools extends javax.swing.JFrame {
         pLTpanel1.setKreslitStatus(jCheckBox2.isSelected());
         pLTpanel1.repaint();
     }//GEN-LAST:event_jCheckBox2ActionPerformed
+
+    @Override
+    public void propertyChange(PropertyChangeEvent evt) {
+        if (evt.getPropertyName().equals("fileRead")) {
+            System.out.println("reader: file read");
+            jLabel1.setText("PLT info: čar " + pltFile.getPocetCar() + " (délka " + Math.round(pltFile.getDelkaCar()) + "); přejezdů " + pltFile.getPocetPrejezdu() + " (délka " + Math.round(pltFile.getDelkaPrejezdu()) + ")");
+            pLTpanel1.setPlt(pltFile);            
+        } else if (evt.getPropertyName().equals("progressValue")) {
+            jProgressBar1.setValue((Integer) evt.getNewValue());
+        } else if (evt.getPropertyName().equals("progressMessage")) {
+            jProgressBar1.setString((String) evt.getNewValue());
+        } else if (evt.getPropertyName().equals("progressFinished")) {
+            jProgressBar1.setValue(0);
+            jProgressBar1.setString("Ready");
+        }
+    }
 
     /**
      * @param args the command line arguments
@@ -212,6 +283,7 @@ public class PLTtools extends javax.swing.JFrame {
          */
         java.awt.EventQueue.invokeLater(new Runnable() {
 
+            @Override
             public void run() {
                 new PLTtools().setVisible(true);
             }
@@ -225,6 +297,8 @@ public class PLTtools extends javax.swing.JFrame {
     private javax.swing.JCheckBox jCheckBox2;
     private javax.swing.JFileChooser jFileChooser1;
     private javax.swing.JLabel jLabel1;
+    private javax.swing.JProgressBar jProgressBar1;
     private plttools.PLTpanel pLTpanel1;
     // End of variables declaration//GEN-END:variables
+
 }

@@ -4,8 +4,9 @@
  */
 package plttools;
 
+import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeSupport;
 import java.io.*;
-import java.text.DecimalFormat;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -27,19 +28,23 @@ public class PLTfile {
     private int pocetBodu = 0;
     private double delkaCar = 0.0;
     private double delkaPrejezdu = 0.0;
+    private PropertyChangeSupport propertySupport = new PropertyChangeSupport(this);
+    private PLTfile optimizedFile = null;
     
-    public static PLTfile readPLTfromFile(File file) {
+    public void readPLTfromFile(File file) {
         BufferedReader reader = null;
-        PLTfile plt = new PLTfile();
         try {
+//            System.out.println("reading started");
             reader = new BufferedReader(new FileReader(file));
             StringBuilder contents = new StringBuilder();
             String text = "";
             while ((text = reader.readLine()) != null) {
                 contents.append(text).append(System.getProperty("line.separator"));            
             }
-            plt.setRawPLT(contents);
-            plt.parseRaw();
+//            System.out.println("file read");
+            setRawPLT(contents);
+//            System.out.println("start parsing");
+            parseRaw();
         } catch (FileNotFoundException ex) {
             Logger.getLogger(PLTfile.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
@@ -51,13 +56,19 @@ public class PLTfile {
                 Logger.getLogger(PLTfile.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
-        return plt;
+//        System.out.println("reading finished");
     }
 
     private void parseRaw() {
         String prikaz;
         boolean penUp = true;
         // spočítat čáry a přejezdy
+        pocetCar = 0;
+        pocetPrejezdu = 0;
+        pocetBodu = 0;
+        delkaPrejezdu = 0;
+        delkaCar = 0;
+//        System.out.println("parseRaw - start parsing");
         StringTokenizer st0 = new StringTokenizer(rawPLT.toString(),";");
         while (st0.hasMoreTokens()) {
             prikaz = st0.nextToken();
@@ -85,7 +96,7 @@ public class PLTfile {
                 penUp = false;
             }
         }
-        
+//        System.out.println("parseRaw - lines counted");
         
         // teď teprve získat jednotlivé hodnoty
         pens = new int[pocetCar];
@@ -108,7 +119,9 @@ public class PLTfile {
         }
         
         penUp = true;
+//        System.out.println("parseRaw - before tokenizer");
         StringTokenizer st = new StringTokenizer(rawPLT.toString(),";");
+//        System.out.println("parseRaw - tokenizer started");
         while (st.hasMoreTokens()) {
             prikaz = st.nextToken();
 
@@ -143,6 +156,7 @@ public class PLTfile {
                     lastX = x2a;
                     lastY = y2a;
                     i++;
+                    //System.out.println("parseRaw - "+i+" tokens read");
                 }
                 penUp = false;
             } else if (prikaz.equals("PD")) {
@@ -156,6 +170,9 @@ public class PLTfile {
             }
         }
 
+//        System.out.println("before property fire");
+        propertySupport.firePropertyChange("fileRead", false, true);
+//        System.out.println("after property fire");
         calculateDistances();
         for (int k=0; k < pocetCar; k++) {
             if (status[k] <= 0) {
@@ -274,20 +291,26 @@ public class PLTfile {
         return false;
     } 
     
-    public PLTfile getOptimizedPLT() {
+    public void optimizePLT() {
         int alghoritm = 3;
         switch(alghoritm) {
             case 3:
-                return optimizationAntColony();
+                optimizedFile = optimizationAntColony();
             case 2:
-                return optimizationGreedy();
+                optimizedFile = optimizationGreedy();
             case 1:
             default:
-                return optimizationGreedyModified();
-        }
+                optimizedFile = optimizationGreedyModified();
+        }        
+        propertySupport.firePropertyChange("progressFinished", false, true);
+    }
+    
+    public PLTfile getOptimizedPLT() {
+        return optimizedFile;
     }
     
     private PLTfile optimizationAntColony() {
+        propertySupport.firePropertyChange("progressMessage", null, "optimization started");
         System.out.println("optimization started");
         PLTfile p = (PLTfile) clone();
         calculateDistances();
@@ -312,13 +335,14 @@ public class PLTfile {
         float attract;
         int i, j, k;
         int lastPoint;
-        int antsCount = 30;
+        int antsCount = 10;
         for (k=0; k<antsCount; k++) {
             if (k==(antsCount-1)) {
                 lastPoint = 0;
             } else {
                 lastPoint = (int) (Math.random()*pocetBodu);
             }
+            propertySupport.firePropertyChange("progressMessage", null, "Ant "+(k+1)+" from "+(antsCount)+"is running");
             System.out.println("Ant "+k+"; startpoint = "+lastPoint);
             int nextPoint = 0;
             boolean processed[] = new boolean[pocetBodu];
@@ -327,6 +351,7 @@ public class PLTfile {
             float vahaVzdalenost = 1.0f;
             float vahaFeromon = 2.0f;
             float vahaNahoda = 1.0f;
+            propertySupport.firePropertyChange("progressMessage", null, "Ant "+(k+1)+" from "+(antsCount)+" calculating attraction");
             for (i=0; i<pocetBodu;i++) {
                 for (j=i+1; j<pocetBodu;j++) {
                     if (distances[i][j] == 0) {
@@ -341,9 +366,11 @@ public class PLTfile {
                     attractivity[i][j] = attract;
                     attractivity[j][i] = attract;
                 }
+            propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*i)/pocetBodu));                            
             }
             // generate ant path
             numProcessed = 0;
+            propertySupport.firePropertyChange("progressMessage", null, "Ant "+(k+1)+" from "+(antsCount)+" running through lines");
             while (numProcessed < pocetBodu) {
                 maxAttractivity = 0;
                 for(i=0; i<pocetBodu; i++) {
@@ -356,6 +383,7 @@ public class PLTfile {
                 antPath[numProcessed] = nextPoint;
                 lastPoint = nextPoint;
                 numProcessed++;
+                propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*numProcessed)/pocetBodu));                            
             }
             // calculate path length
             antPathLength = 0.0;
@@ -375,14 +403,17 @@ public class PLTfile {
             }
             System.out.println("pheromone increase = " + 20000.0f/antPathLength);
             int r,s;
+            propertySupport.firePropertyChange("progressMessage", null, "Ant "+(k+1)+" from "+(antsCount)+" deposing pheromones");
             for (i=1; i<pocetBodu; i++) {
                 r = antPath[i];
                 s = antPath[i-1];
                 pheromone = (float) (pheromones[r][s] + 20000.0f/antPathLength);
                 pheromones[r][s] = pheromone;
                 pheromones[s][r] = pheromone;
+                propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*i)/pocetBodu));                            
             }
         }
+        propertySupport.firePropertyChange("progressMessage", null, "Generating final path.");
         for (i=1; i<pocetBodu; i++) {
             for(j=0; j<pocetCar; j++) {
                 if (lines_1[j] == antPath[i-1] && lines_2[j] == antPath[i]) {
@@ -403,6 +434,7 @@ public class PLTfile {
                     break;
                 }         
             }
+            propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*i)/pocetBodu));                            
         }
         p.calculatePathLengths();
         return p;
@@ -464,6 +496,7 @@ public class PLTfile {
         float dist;
         distances = new float[pocetBodu][pocetBodu];
         int i, j, k;
+        propertySupport.firePropertyChange("progressMessage", null, "distance calculation");
         for (i=0; i<pocetBodu; i++) {
             distances[i][i] = 2*(max_x+max_y);
             for (j=i+1; j<pocetBodu; j++) {
@@ -473,8 +506,10 @@ public class PLTfile {
                 distances[i][j] = dist;
                 distances[j][i] = dist;
             }
+            propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*i)/pocetBodu));            
         }
         // set distance of points, that are common for just two lines to bad value
+        propertySupport.firePropertyChange("progressMessage", null, "loops detection");
         int zeroDistCount;
         for (i=0; i<pocetBodu; i++) {
             zeroDistCount = 0;
@@ -505,6 +540,7 @@ public class PLTfile {
                     }
                 }
             }
+            propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*i)/pocetBodu));            
         }
         
         // set distance of all connected points best value
@@ -520,6 +556,7 @@ public class PLTfile {
 //            }
 //            System.out.println();
 //        }
+        propertySupport.firePropertyChange("progressFinished", false, true);
     }
     
     private PLTfile optimizationGreedyModified() {
@@ -728,4 +765,8 @@ public class PLTfile {
         return p;
     }
         
+    public void addPropertyChangeListener(PropertyChangeListener listener) {
+        propertySupport.addPropertyChangeListener(listener);
+    }
+
 }
