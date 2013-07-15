@@ -16,7 +16,7 @@ import javax.swing.JPanel;
  */
 public class PLTpanel extends JPanel {
 
-    private PLTfile plt = null;
+    private PLTdata plt = null;
     private double scale = 1.0;
     private final int margin = 3;
     private boolean kreslitPrejezdy = true;
@@ -66,13 +66,13 @@ public class PLTpanel extends JPanel {
             int lines_2[] = plt.getLines_2();
             int point_x[] = plt.getPoint_x();
             int point_y[] = plt.getPoint_y();
-            int pens[] = plt.getPens();
-            int status[] = plt.getStatus();
-            int pocet = plt.getPocetCar();        
+            byte pens[] = plt.getPens();
+            byte status[] = plt.getStatus();
+            int pocet = plt.getPopulatedLines();        
 
             g.setColor(Color.WHITE);
-            g.fillRect(transformX(0), transformY(plt.getMax_y()), transformX(plt.getMax_x()) - transformX(0), transformY(0) - transformY(plt.getMax_y()));
-            //System.out.println("drawing; scale = " + scale + "x1 size = " + x1.length);
+            g.fillRect(transformX(0), transformY(plt.getBoundingBox().getMaxY()), transformX(plt.getBoundingBox().getMaxX()) - transformX(0), transformY(0) - transformY(plt.getBoundingBox().getMaxY()));
+//            System.out.println("drawing; scale = " + scale + "maxX = " + plt.getBoundingBox().getMaxX());
 
             int lastX = 0;
             int lastY = 0;
@@ -155,7 +155,7 @@ public class PLTpanel extends JPanel {
         }
     }
 
-    public void setPlt(PLTfile plt) {
+    public void setPlt(PLTdata plt) {
         this.plt = plt;
         setAutoScaleAndCenter();           
         repaint();
@@ -187,9 +187,9 @@ public class PLTpanel extends JPanel {
     }
     
     private void setAutoScaleAndCenter() {
-        scale = Math.min(1.0 * (getWidth()-2*margin)/ plt.getMax_x(), 1.0 * (getHeight()-2*margin) / plt.getMax_y());
-        centerX = plt.getMax_x()/2;
-        centerY = plt.getMax_y()/2;                    
+        scale = Math.min(1.0 * (getWidth()-2*margin)/ plt.getBoundingBox().getMaxX(), 1.0 * (getHeight()-2*margin) / plt.getBoundingBox().getMaxY());
+        centerX = (int) (plt.getBoundingBox().getMaxX() / 2);
+        centerY = (int) (plt.getBoundingBox().getMaxY() / 2);                  
     }
     
     private void panelMouseDragged(MouseEvent e) {
