@@ -21,6 +21,7 @@ public class PLTpanel extends JPanel {
     private final int margin = 3;
     private boolean kreslitPrejezdy = true;
     private boolean kreslitStatus = false;
+    private boolean drawDebug = false;
     private int centerX;
     private int centerY;
     private Point dragPoint = new Point(0,0);
@@ -70,13 +71,20 @@ public class PLTpanel extends JPanel {
             byte status[] = plt.getStatus();
             int pocet = plt.getPopulatedLines();        
 
+            // draw the background for area for output of plot
             g.setColor(Color.WHITE);
             g.fillRect(transformX(0), transformY(plt.getBoundingBox().getMaxY()), transformX(plt.getBoundingBox().getMaxX()) - transformX(0), transformY(0) - transformY(plt.getBoundingBox().getMaxY()));
 //            System.out.println("drawing; scale = " + scale + "maxX = " + plt.getBoundingBox().getMaxX());
 
+            // dimension of info box for displaying numbers of lines and points
+            int infoW = 25, infoH = 15;
+            
+            // draw all lines
             int lastX = 0;
             int lastY = 0;
             int lastPoint = -1;
+            int midpointX;
+            int midpointY;
             for (int i = 0; i < pocet; i++) {
                 if (kreslitPrejezdy && (lines_1[i] != lastPoint)) {
                     g.setColor(getColorForPen(-1));
@@ -94,6 +102,16 @@ public class PLTpanel extends JPanel {
                 }
                 g.drawLine(transformX(point_x[lines_1[i]]), transformY(point_y[lines_1[i]]),
                            transformX(point_x[lines_2[i]]), transformY(point_y[lines_2[i]]));   
+                
+                if (drawDebug) {
+                    midpointX = transformX((point_x[lines_1[i]] + point_x[lines_2[i]])/2);
+                    midpointY = transformY((point_y[lines_1[i]] + point_y[lines_2[i]])/2);
+                    g.setColor(Color.WHITE);
+                    g.fillRect(midpointX - infoW/2, midpointY - infoH/2, infoW, infoH);
+                    g.setColor(Color.BLACK);
+                    g.drawRect(midpointX - infoW/2, midpointY - infoH/2, infoW, infoH);
+                    g.drawString(Integer.toString(i), midpointX - infoW/2+2, midpointY + infoH/2-2);
+                }
                 lastX = point_x[lines_2[i]];
                 lastY = point_y[lines_2[i]];
                 lastPoint = lines_2[i];
@@ -101,6 +119,25 @@ public class PLTpanel extends JPanel {
 //                    System.out.println("i="+i+"; x1="+transformX(x1[i])+";y1="+transformY(y1[i])
 //                           +";x2="+transformX(x2[i])+";y2="+transformY(y2[i]));
 //                }
+            }
+            
+            // draw marks at points if debug info selected
+            if(drawDebug) {
+                int pX, pY;
+                for (int i=0; i< plt.getPocetBodu(); i++) {
+                    pX = transformX(plt.getPoint_x()[i]);
+                    pY = transformY(plt.getPoint_y()[i]);
+                    // fill the area for label
+                    g.setColor(Color.WHITE);
+                    g.fillRect(pX - infoW/2, pY - infoH - 5, infoW, infoH);
+                    // draw border of label
+                    g.setColor(Color.BLUE);
+                    g.drawRect(pX - infoW/2, pY - infoH - 5, infoW, infoH);
+                    // draw connecting line
+                    g.drawLine(pX, pY, pX, pY-5);
+                    // and outpt the text
+                    g.drawString(Integer.toString(i), pX - infoW/2+2, pY - 5 - 2);
+                }
             }
         }        
     }
@@ -163,12 +200,19 @@ public class PLTpanel extends JPanel {
 
     public void setKreslitPrejezdy(boolean kreslitPrejezdy) {
         this.kreslitPrejezdy = kreslitPrejezdy;
+        repaint();
     }
 
     public void setKreslitStatus(boolean kreslitStatus) {
         this.kreslitStatus = kreslitStatus;
+        repaint();
     }
 
+    public void setDrawDebug(boolean drawDebug) {
+        this.drawDebug = drawDebug;
+        repaint();
+    }
+    
     private void panelMouseWheelMoved(MouseWheelEvent e) {
         double origScale = scale;
         int origCenterX = transformX(centerX);

@@ -55,9 +55,11 @@ public class CorrectorOptimizer extends AbstractOptimizer {
                 x1_2 = pd.getPoint_x()[l1_2];
                 y1_2 = pd.getPoint_y()[l1_2];
                 float lengthOfLine_i = pd.getLengthOfLine(i);
-                p.addLine(x1_1 - offsetX, y1_1- offsetY, x1_2- offsetX, y1_2- offsetY, pd.getPens()[i]);                    
+//                p.addLine(x1_1 - offsetX, y1_1- offsetY, x1_2- offsetX, y1_2- offsetY, pd.getPens()[i]);                    
                 // skip already processed lines
                 if (lineProcessed[i]) {
+                        System.out.println("line #" + i + " skipped (conditions: "
+                                + lineProcessed[i]+")");
                     continue;
                 }
                 
@@ -74,6 +76,16 @@ public class CorrectorOptimizer extends AbstractOptimizer {
                     l2_2 = pd.getLines_2()[j];
                     if (lineProcessed[j] || (i==j) || (pd.getLengthOfLine(j) > lengthOfLine_i)
                             || (l1_1 == l2_1) || (l1_1 == l2_2) || (l1_2 == l2_1) || (l1_2 == l2_2)) {
+                        if (i==25) {
+                            System.out.println("line #"+i+" - line #" + j + " skipped (conditions: "
+                                + lineProcessed[j] +", "
+                                + (i==j) +", "
+                                + (pd.getLengthOfLine(j) > lengthOfLine_i) +", "
+                                + (l1_1 == l2_1) +", "
+                                + (l1_1 == l2_2) +", "
+                                + (l1_2 == l2_1) +", "
+                                + (l1_2 == l2_2) +")");
+                        }
                         continue;
                     }
 
@@ -88,13 +100,23 @@ public class CorrectorOptimizer extends AbstractOptimizer {
                     // (there are another possibilities - one point from longer line and one point from shorter line and all their combinations
                     float distShorter1_toLonger = pd.getDistanceOfPointFromLine(l2_1, i);
                     float distShorter2_toLonger = pd.getDistanceOfPointFromLine(l2_2, i);
+                    if (i == 25) {
+                        System.out.println("distance of line #"+j+", point #"+l2_1+" to line #"+i+" = "+distShorter1_toLonger);
+                        System.out.println("distance of line #"+j+", point #"+l2_2+" to line #"+i+" = "+distShorter2_toLonger);
+                        System.out.println("conditions: ("
+                                + (distShorter1_toLonger < threshold) + ", "
+                                + (distShorter2_toLonger < threshold) + ", "
+                                + ((pd.getDistance(l2_1, l1_1) + pd.getDistance(l2_1, l1_2)) < (lengthOfLine_i + 2* threshold)) + ", "
+                                + ((pd.getDistance(l2_2, l1_1) + pd.getDistance(l2_2, l1_2)) < (lengthOfLine_i + 2* threshold)) 
+                                + ")");
+                    }
                     
                     // if two points are within the distance, we have the duplicity of lines
                     // and we can calculate midpoints between line i and line j
                     if ( (distShorter1_toLonger < threshold) 
                             && (distShorter2_toLonger < threshold)
-                            && (pd.getDistance(l2_1, l1_1) + pd.getDistance(l2_2, l1_1)) < (lengthOfLine_i + 2* threshold)
-                            && (pd.getDistance(l2_1, l1_2) + pd.getDistance(l2_2, l1_2)) < (lengthOfLine_i + 2* threshold)
+                            && (pd.getDistance(l2_1, l1_1) + pd.getDistance(l2_1, l1_2)) < (lengthOfLine_i + 2* threshold)
+                            && (pd.getDistance(l2_2, l1_1) + pd.getDistance(l2_2, l1_2)) < (lengthOfLine_i + 2* threshold)
                             ) {
                         Point intersect1 = pd.getClosestPointOnLine(l2_1, i);
                         Point intersect2 = pd.getClosestPointOnLine(l2_2, i);
@@ -186,8 +208,8 @@ public class CorrectorOptimizer extends AbstractOptimizer {
                                     lastY - offsetY, 
                                     nextX - offsetX,
                                     nextY - offsetY, 
-                                    (byte) 6);
-//                                    pd.getPens()[i]);
+//                                    (byte) 5);
+                                    pd.getPens()[i]);
                     }
                     
                     // and prepare variables for next run of finding next point on intersected line
@@ -210,14 +232,28 @@ public class CorrectorOptimizer extends AbstractOptimizer {
 
                 
                 // if the line does not have duplicities and is longer than threshold 
-                if (numDuplicities == 0) {
+//                if (numDuplicities == 0) {
 //                if ((numDuplicities == 0) && pd.calculateDistance(l1_1,l1_2) > threshold) {
                 // set the line as processed not to return to them
-                lineProcessed[i] = true;
-//                    p.addLine(x1_1 - offsetX, y1_1- offsetY, x1_2- offsetX, y1_2- offsetY, pd.getPens()[i]);                    
+//                    p.addLine(x1_1 - offsetX, y1_1- offsetY, x1_2- offsetX, y1_2- offsetY, pd.getPens()[i]);    
+//                }
+
+                if (numDuplicities >0) {
+                    lineProcessed[i] = true;
                 }
             }
             
+            for(i=0; i<pd.getPocetCar();i++) {
+                l1_1 = pd.getLines_1()[i];
+                l1_2 = pd.getLines_2()[i];
+                x1_1 = pd.getPoint_x()[l1_1];
+                y1_1 = pd.getPoint_y()[l1_1];
+                x1_2 = pd.getPoint_x()[l1_2];
+                y1_2 = pd.getPoint_y()[l1_2];
+                if (! lineProcessed[i] && pd.calculateDistance(l1_1,l1_2) > threshold) {
+                    p.addLine(x1_1 - offsetX, y1_1- offsetY, x1_2- offsetX, y1_2- offsetY, pd.getPens()[i]);  
+                }
+            }
             p.calculateDistances();
             p.calculateStats();
             return p;
