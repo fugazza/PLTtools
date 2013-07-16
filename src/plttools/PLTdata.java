@@ -301,21 +301,39 @@ public class PLTdata {
         return calculateDistance(lines_1[lineNum], lines_2[lineNum]);
     }
     
+    // claculates angle between given lines
+    public double angleBetweenLines(int line1, int line2) {
+        int u1 = point_x[lines_2[line1]] - point_x[lines_1[line1]];
+        int u2 = point_y[lines_2[line1]] - point_y[lines_1[line1]];
+        int v1 = point_x[lines_2[line2]] - point_x[lines_1[line2]];
+        int v2 = point_y[lines_2[line2]] - point_y[lines_1[line2]];
+        
+        return Math.acos(Math.abs(u1*v1 + u2*v2) / (Math.sqrt(u1*u1+u2*u2)*Math.sqrt(v1*v1+v2*v2))) * 180/Math.PI;
+        
+    }
+    
     // claculates distance of point pointNum to (indefinite) line lineNum
     public float getDistanceOfPointFromLine(int pointNum, int lineNum) {
+        
+        int m = point_x[pointNum];
+        int n = point_y[pointNum];
+        
+        
+        // and finally apply the equation for calculation of distance of point
+        return _getDistanceOfPoint(m, n, lineNum);
+    }
+    
+    private float _getDistanceOfPoint(int m, int n, int lineNum) {
         // first we need to calculate line equation in general form
         int x1 = point_x[lines_1[lineNum]];
         int y1 = point_y[lines_1[lineNum]];
         int x2 = point_x[lines_2[lineNum]];
         int y2 = point_y[lines_2[lineNum]];
         
-        int m = point_x[pointNum];
-        int n = point_y[pointNum];
-        
         int a = y2 - y1;
         int b = -(x2 - x1);
         float c = -x1*a - y1*b;
-        
+
         // and finally apply the equation for calculation of distance of point
         return (float) (Math.abs(a*m + b*n + c) / Math.sqrt(a*a + b*b));
     }
@@ -347,6 +365,23 @@ public class PLTdata {
             x = Math.round((-c - b*y) / a);
         }
         return new Point(x, y);
+    }
+    
+    public boolean isPointInLine(Point p, int lineNum) {
+        int x1 = point_x[lines_1[lineNum]];
+        int y1 = point_y[lines_1[lineNum]];
+        int x2 = point_x[lines_2[lineNum]];
+        int y2 = point_y[lines_2[lineNum]];
+        Rectangle lineRange = new Rectangle(Math.min(x1,x2)-1, Math.min(y1,y2)-1, Math.abs(x2-x1)+2,Math.abs(y2-y1)+2);
+        if (_getDistanceOfPoint(p.x, p.y, lineNum) > 0.1) {
+            System.out.println("point " + p + " not on line #" + lineNum + "(distance = "+_getDistanceOfPoint(p.x, p.y, lineNum)+")");
+            return false;
+        } else if (lineRange.contains(p.x, p.y)) {
+            return true;
+        } else {
+            System.out.println("point " + p + " not between endpoints of line #" + lineNum + " - ["+x1+";"+y1+"] - ["+x2+";"+y2+"]");
+            return false;
+        }
     }
     
     public double getDelkaCar() {
