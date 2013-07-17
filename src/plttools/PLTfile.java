@@ -10,6 +10,7 @@ import java.io.*;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.JOptionPane;
 import plttools.optimizer.AbstractOptimizer;
 import plttools.optimizer.AntColonyOptimizer;
 import plttools.optimizer.CorrectorOptimizer;
@@ -182,13 +183,25 @@ public class PLTfile {
         optimizer.setSettings(settings);
         optimizer.setData(pltData);
 //        System.out.println("optimization before start");
+        int linesBeforeOptimization = pltData.getPocetCar();
         try {
             optimizedFile = optimizer.optimize();
             optimizedFile.calculateStats();
         } catch (Exception e) {
             e.printStackTrace();
+            JOptionPane.showMessageDialog(null,
+                    "Following error occured during optimization:\n" + e.toString(),
+                    "Optimization error",
+                    JOptionPane.ERROR_MESSAGE);
         }
 //        System.out.println("optimization finished");
+        int linesAfterOptimization = optimizedFile.getPocetCar();
+        if (!optimizer.changesLineCount() && (linesBeforeOptimization != linesAfterOptimization)) {
+            JOptionPane.showMessageDialog(null,
+                    "Lines count after optimization ("+linesAfterOptimization+") does not match line count before optimization ("+linesBeforeOptimization+").\nSomething is terribly wrong, because the alghoritm should not change count of lines.",
+                    "Error: Lines counte before and after optimization does not macth.",
+                    JOptionPane.ERROR_MESSAGE);
+        }
         propertySupport.firePropertyChange("progressFinished", false, true);
     }
     

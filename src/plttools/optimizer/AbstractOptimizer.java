@@ -40,5 +40,5 @@ public abstract class AbstractOptimizer {
         this.settings = settings;
     }
     
-    
+    public abstract boolean changesLineCount();
 }

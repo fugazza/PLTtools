@@ -72,4 +72,9 @@ public class GreedyOptimizer extends AbstractOptimizer {
         return p;
     }
    
+    @Override
+    public boolean changesLineCount() {
+        return false;
+    }
+
 }

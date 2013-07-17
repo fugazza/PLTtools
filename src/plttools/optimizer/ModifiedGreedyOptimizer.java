@@ -99,5 +99,10 @@ public class ModifiedGreedyOptimizer extends AbstractOptimizer {
         p.calculatePathLengths();
         return p;
     }
+
+    @Override
+    public boolean changesLineCount() {
+        return false;
+    }
     
 }

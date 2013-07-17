@@ -194,4 +194,10 @@ public class AntColonyOptimizer extends AbstractOptimizer {
         }
 //        return (float) (Math.pow(1/distance,vahaVzdalenost));
     }
+
+    @Override
+    public boolean changesLineCount() {
+        return false;
+    }
+
 }
