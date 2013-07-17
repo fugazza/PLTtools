@@ -2,3 +2,6 @@
 /build.xml
 /manifest.mf
 /build/
+/dist/README.TXT
+# do not display temporary files
+*~
