@@ -20,7 +20,7 @@ public class PLTdata {
     protected int point_y[];
     protected int lines_1[];
     protected int lines_2[];
-    protected byte pens[];
+    protected byte pen;
     protected byte status[];
     protected int pocetCar;
     private int populatedLines = 0;
@@ -173,6 +173,9 @@ public class PLTdata {
     
     public void calculateStats() {
         double thisTravel;
+        pocetPrejezdu = 0;
+        delkaPrejezdu = 0;
+        delkaCar = 0;
         for (int k=0; k < pocetCar; k++) {
             delkaCar += Math.sqrt(Math.pow(point_x[lines_2[k]] - point_x[lines_1[k]], 2) + Math.pow(point_y[lines_2[k]] - point_y[lines_1[k]], 2));
             status[k] = checkStatus(k);
@@ -190,7 +193,6 @@ public class PLTdata {
     public void setLineCount(int lineCount) {
         pocetCar = lineCount;
         populatedLines = 0;
-        pens = new byte[pocetCar];
         status = new byte[pocetCar];
         lines_1 = new int[pocetCar];
         lines_2 = new int[pocetCar];
@@ -202,15 +204,14 @@ public class PLTdata {
         }
     }
     
-    public void addLine(int startX, int startY, int endX, int endY, byte pen) {
-//        System.out.println("add line [" + startX + ";" + startY + "] - [" + endX + ";" + endY + "]; pen = "+ pen);
+    public void addLine(int startX, int startY, int endX, int endY) {
+        System.out.println("add line #"+populatedLines+" [" + startX + ";" + startY + "] - [" + endX + ";" + endY + "]; pen = "+ pen);
 //        System.out.println("number of points = " + pocetBodu);
         int startId = getPointId(startX, startY, true);
         int endId = getPointId(endX, endY, true);
 //        System.out.println("startId = " + startId + "; endId = " + endId);
         lines_1[populatedLines] = startId;
         lines_2[populatedLines] = endId;
-        pens[populatedLines] = pen;
         populatedLines++;
     }
 
@@ -390,8 +391,12 @@ public class PLTdata {
         return populatedLines;
     }
 
-    public byte[] getPens() {
-        return pens;
+    public byte getPen() {
+        return pen;
+    }
+
+    public void setPen(byte pen) {
+        this.pen = pen;
     }
 
     public byte[] getStatus() {
@@ -450,7 +455,7 @@ public class PLTdata {
         p.pocetCar = pocetCar;
         p.pocetBodu = pocetBodu;
         p.boundingBox = (Rectangle) boundingBox.clone();
-        p.pens = new byte[pocetCar];
+        p.pen = this.pen;
         p.status = new byte[pocetCar];
         p.lines_1 = new int[pocetCar];
         p.lines_2 = new int[pocetCar];

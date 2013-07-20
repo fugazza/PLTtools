@@ -453,8 +453,12 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
 
                 @Override
                 protected Void doInBackground() throws Exception {
-                    pltFile.readPLTfromFile(jFileChooser1.getSelectedFile());
-                    pLTpanel1.setPlt(pltFile.getPltData());
+                    try {
+                        pltFile.readPLTfromFile(jFileChooser1.getSelectedFile());
+                        pLTpanel1.setPlt(pltFile.getPltData());
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                     return null;
                 }
                 
@@ -482,7 +486,7 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
 
                 @Override
                 protected void done() {
-                    PLTdata pltData = pltFile.getOptimizedPLT();
+                    PLTdata pltData[] = pltFile.getOptimizedPLT();
                     pltFile.setPltData(pltData);
                     pLTpanel1.setPlt(pltData);            
                     displayPLTStats();
@@ -524,7 +528,7 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
     }
 
     private void displayPLTStats() {
-        jLabel1.setText("PLT info: lines " + pltFile.getPltData().getPocetCar() + " (length " + Math.round(pltFile.getPltData().getDelkaCar()) + "); travels " + pltFile.getPltData().getPocetPrejezdu() + " (length " + Math.round(pltFile.getPltData().getDelkaPrejezdu()) + ")");        
+        jLabel1.setText("PLT info: lines " + pltFile.getLinesCount() + " (length " + pltFile.getLinesLength() + "); travels " + pltFile.getTravelsCount() + " (length " + pltFile.getTravelsLength() + ")");        
     }
     
     /**

@@ -15,6 +15,7 @@ public class GreedyOptimizer extends AbstractOptimizer {
     @Override
     public PLTdata optimize() {
         PLTdata p = new PLTdata();
+        p.setPen(pd.getPen());        
         pd.calculateDistances();
         int numProcessed = 0;
         int lastPoint = 0;
@@ -55,11 +56,11 @@ public class GreedyOptimizer extends AbstractOptimizer {
                 x2 = pd.getPoint_x()[l2];
                 y2 = pd.getPoint_y()[l2];
                 if (l1 == lastPoint && l2 == minPoint) {
-                    p.addLine(x1, y1, x2, y2, pd.getPens()[j]);
+                    p.addLine(x1, y1, x2, y2);
                     break;
                 }
                 if (l2 == lastPoint && l1 == minPoint) {
-                    p.addLine(x2, y2, x1, y1, pd.getPens()[j]);
+                    p.addLine(x2, y2, x1, y1);
                     break;
                 }            
             }

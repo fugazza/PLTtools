@@ -21,6 +21,7 @@ public class AntColonyOptimizer extends AbstractOptimizer {
         propertySupport.firePropertyChange("progressMessage", null, "optimization started");
 //        System.out.println("property fired");
         PLTdata p = new PLTdata();
+        p.setPen(pd.getPen());
         pd.calculateDistances();
 //        System.out.println("distances calculated");
         int numProcessed;
@@ -150,12 +151,12 @@ public class AntColonyOptimizer extends AbstractOptimizer {
                 x2 = pd.getPoint_x()[l2];
                 y2 = pd.getPoint_y()[l2];
                 if (l1 == antPath[i-1] && l2 == antPath[i]) {
-                    p.addLine(x1, y1, x2, y2, pd.getPens()[j]);
+                    p.addLine(x1, y1, x2, y2);
 //                    System.out.println("added line from [" + x1 + ";" + y1 + "] to [" + x2 + ";" + y2 + "]");
                     linesFound[j] = true;
                     break;
                 } else if (l2 == antPath[i-1] && l1 == antPath[i]) {
-                    p.addLine(x2, y2, x1, y1, pd.getPens()[j]);
+                    p.addLine(x2, y2, x1, y1);
 //                    System.out.println("added line from [" + x2 + ";" + y2 + "] to [" + x1 + ";" + y1 + "]");
                     linesFound[j] = true;
                     break;

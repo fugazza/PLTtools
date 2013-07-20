@@ -17,13 +17,13 @@ public class ModifiedGreedyOptimizer extends AbstractOptimizer {
         PLTdata p = new PLTdata();
         boolean processed[] = new boolean[pd.getPocetCar()];
         int numProcessed = 0;
-        int lastX2 = 0, lastY2 = 0, lastPen = -1;
+        int lastX2 = 0, lastY2 = 0;
         int range = 0;
-        boolean canChangePen = false;
         int rangeNulling = 0;
         int vzdalenost1x, vzdalenost1y, vzdalenost2x, vzdalenost2y, vzdalenost1, vzdalenost2;
         int l1, l2, x1, y1, x2, y2;
         p.setLineCount(pd.getPocetCar());
+        p.setPen(pd.getPen());
         while (numProcessed < pd.getPocetCar()) {
             System.out.println("processed="+numProcessed+"; range = "+range);
             boolean findLineStart = true;
@@ -35,7 +35,7 @@ public class ModifiedGreedyOptimizer extends AbstractOptimizer {
             do {
                 haveLine = false;
                 for (int j=0; j<pd.getPocetCar(); j++) {
-                    if (processed[j] || (lastPen != -1 && !canChangePen && pd.getPens()[j] != lastPen)) {
+                    if (processed[j]) {
 //                    if (processed[j]) {
                         continue;
                     }
@@ -58,17 +58,15 @@ public class ModifiedGreedyOptimizer extends AbstractOptimizer {
                             && (!findLineStart || pd.getStatus()[j]!=4))) {
                         
                         if (vzdalenost1==0 || (vzdalenost2!=0 && ((pd.getStatus()[j]==1) || (vzdalenost1<=vzdalenost2 && pd.getStatus()[j]!=2)))) {
-                            p.addLine(x1, y1, x2, y2, pd.getPens()[j]);
+                            p.addLine(x1, y1, x2, y2);
                             lastX2 = x2;
                             lastY2 = y2;
                         } else {
-                            p.addLine(x2, y2, x1, y1, pd.getPens()[j]);
+                            p.addLine(x2, y2, x1, y1);
                             lastX2 = x1;
                             lastY2 = y1;
                         }
                         
-                        lastPen = pd.getPens()[j];
-                        canChangePen = false;
                         processed[j] = true;
                         numProcessed++;
                         haveLine = true;
@@ -85,7 +83,6 @@ public class ModifiedGreedyOptimizer extends AbstractOptimizer {
                 //range = max_x + max_y;
             } else if (range > (Math.max(pd.getBoundingBox().getWidth()+pd.getBoundingBox().getHeight(),
                                          pd.getBoundingBox().getMaxX()+pd.getBoundingBox().getMaxY()))) {
-                canChangePen = true;
                 range = 0;
                 lastX2 = 0;
                 lastY2 = 0;

@@ -24,25 +24,25 @@ import plttools.optimizer.ModifiedGreedyOptimizer;
 public class PLTfile {
 
     private StringBuilder rawPLT;
-    private PLTdata pltData;
+    private PLTdata[] pltData;
     private PropertyChangeSupport propertySupport = new PropertyChangeSupport(this);
-    private PLTdata optimizedFile = null;
+    private PLTdata optimizedPltData[];
     private PropertyChangeListener parent;
     private SettingsData settings;
     
     public void readPLTfromFile(File file) {
         BufferedReader reader = null;
         try {
-//            System.out.println("reading started");
+            System.out.println("reading started");
             reader = new BufferedReader(new FileReader(file));
             StringBuilder contents = new StringBuilder();
             String text = "";
             while ((text = reader.readLine()) != null) {
                 contents.append(text).append(System.getProperty("line.separator"));            
             }
-//            System.out.println("file read");
+            System.out.println("file read");
             setRawPLT(contents);
-//            System.out.println("start parsing");
+            System.out.println("start parsing");
             parseRaw();
         } catch (FileNotFoundException ex) {
             Logger.getLogger(PLTfile.class.getName()).log(Level.SEVERE, null, ex);
@@ -60,11 +60,15 @@ public class PLTfile {
 
     private void parseRaw() {
         String prikaz;
+        // count number of lines, points and pens
+        int maxPens = 7;
+        int countTravels[] = new int[maxPens];
+        int countLines[] = new int[maxPens];
         boolean penUp = true;
-        // spočítat čáry a přejezdy
-        int pocetPrejezdu = 0;
-        int pocetCar = 0;
-//        System.out.println("parseRaw - start parsing");
+        int activePen = 0;
+        boolean pensInPlot[] = new boolean[maxPens];
+        
+        System.out.println("parseRaw - start parsing");
         StringTokenizer st0 = new StringTokenizer(rawPLT.toString(),";");
         while (st0.hasMoreTokens()) {
             prikaz = st0.nextToken();
@@ -74,7 +78,7 @@ public class PLTfile {
                 while (st2.hasMoreTokens()) {
                     st2.nextToken();
                     st2.nextToken();
-                    pocetPrejezdu++;
+                    countTravels[activePen]++;
                 }
                 penUp = true;
             } else if (prikaz.equals("PU")) {
@@ -85,28 +89,57 @@ public class PLTfile {
                 while (st2.hasMoreTokens()) {
                     st2.nextToken();
                     st2.nextToken();
-                    pocetCar++;
+                    countLines[activePen]++;
                 }
                 penUp = false;
             } else if (prikaz.equals("PD")) {
                 penUp = false;
+            } else if (prikaz.startsWith("SP")) {
+                if (prikaz.length() > 2) {
+                    activePen = Byte.parseByte(prikaz.substring(2));
+                } else {
+                    activePen = 0;
+                }
+                if (!pensInPlot[activePen]) {
+                    pensInPlot[activePen] = true;
+                }
             }
         }
-//        System.out.println("parseRaw - lines counted: " + pocetCar);
         
-        // teď teprve získat jednotlivé hodnoty
-        pltData = new PLTdata();
-        pltData.setLineCount(pocetCar);
+        // recalculate count of pens and verify if they really contain any line
+        int countPens = 0;
+        for(int k=0; k<maxPens; k++) {
+            if (countLines[k] > 0) {
+                countPens++;                            
+            }
+        }
+        
+        // and since now acquire plot values from source file
+        pltData = new PLTdata[countPens];
+        optimizedPltData = new PLTdata[countPens];
+        int penToIndex[] = new int[maxPens];
+        // initialize plotData array
+        int l=0;
+        for(int k=0; k<maxPens; k++) {
+            System.out.println("parseRaw - " + countLines[k] + " lines for pen " + k);
+            if (pensInPlot[k] && countLines[k] > 0) {
+                pltData[l] = new PLTdata();
+                pltData[l].setLineCount(countLines[k]);
+                optimizedPltData[l] = new PLTdata();
+                penToIndex[k] = l;
+                l++;
+            }
+        }
+        
         int x2a;
         int y2a;
         int i = 0;
-        byte pen = 0;
         int lastX = 0, lastY = 0;
                
         penUp = true;
-//        System.out.println("parseRaw - before tokenizer");
+        System.out.println("parseRaw - before tokenizer");
         StringTokenizer st = new StringTokenizer(rawPLT.toString(),";");
-//        System.out.println("parseRaw - tokenizer started");
+        System.out.println("parseRaw - tokenizer started");
         while (st.hasMoreTokens()) {
             prikaz = st.nextToken();
 //            System.out.println("prikaz: " +prikaz);
@@ -130,7 +163,7 @@ public class PLTfile {
                 while (st2.hasMoreTokens()) {
                     x2a = Integer.parseInt(st2.nextToken());
                     y2a = Integer.parseInt(st2.nextToken());
-                    pltData.addLine(lastX, lastY, x2a, y2a, pen);
+                    pltData[penToIndex[activePen]].addLine(lastX, lastY, x2a, y2a);
                     lastX = x2a;
                     lastY = y2a;
                     i++;
@@ -141,17 +174,21 @@ public class PLTfile {
                 penUp = false;
             } else if (prikaz.startsWith("SP")) {
                 if (prikaz.length() > 2) {
-                    pen = Byte.parseByte(prikaz.substring(2));
+                    activePen = Byte.parseByte(prikaz.substring(2));
                 } else {
-                    pen = 0;
+                    activePen = 0;
                 }
+                pltData[penToIndex[activePen]].setPen((byte) activePen);
             }
         }
 
-        pltData.calculateStats();
-//        System.out.println("before property fire");
+        for (PLTdata p: pltData) {
+            p.calculatePathLengths();
+            p.calculateStats();            
+        }
+        System.out.println("before property fire");
         propertySupport.firePropertyChange("fileRead", false, true);
-//        System.out.println("after property fire");
+        System.out.println("after property fire");
 //        System.out.println("počet bodů = " + pocetBodu);
 //        for (int l=0; l<25; l++) {
 //            System.out.println("line "+l+": from "+lines_1[l]+"["+point_x[lines_1[l]]+","+point_y[lines_1[l]]+"] to "+lines_2[l]+"["+point_x[lines_2[l]]+","+point_y[lines_2[l]]+"]");
@@ -181,12 +218,15 @@ public class PLTfile {
         }      
         optimizer.addPropertyChangeListener(parent);
         optimizer.setSettings(settings);
-        optimizer.setData(pltData);
-//        System.out.println("optimization before start");
-        int linesBeforeOptimization = pltData.getPocetCar();
+        System.out.println("optimization before start");
+        int linesBeforeOptimization = countTotalLines(pltData);
         try {
-            optimizedFile = optimizer.optimize();
-            optimizedFile.calculateStats();
+            optimizedPltData = new PLTdata[pltData.length];
+            for (int i=0; i<pltData.length; i++) {
+                optimizer.setData(pltData[i]);
+                optimizedPltData[i] = optimizer.optimize();
+                optimizedPltData[i].calculateStats();
+            }
         } catch (Exception e) {
             e.printStackTrace();
             JOptionPane.showMessageDialog(null,
@@ -194,8 +234,8 @@ public class PLTfile {
                     "Optimization error",
                     JOptionPane.ERROR_MESSAGE);
         }
-//        System.out.println("optimization finished");
-        int linesAfterOptimization = optimizedFile.getPocetCar();
+        System.out.println("optimization finished");
+        int linesAfterOptimization = countTotalLines(optimizedPltData);
         if (!optimizer.changesLineCount() && (linesBeforeOptimization != linesAfterOptimization)) {
             JOptionPane.showMessageDialog(null,
                     "Lines count after optimization ("+linesAfterOptimization+") does not match line count before optimization ("+linesBeforeOptimization+").\nSomething is terribly wrong, because the alghoritm should not change count of lines.",
@@ -205,8 +245,17 @@ public class PLTfile {
         propertySupport.firePropertyChange("progressFinished", false, true);
     }
     
-    public PLTdata getOptimizedPLT() {
-        return optimizedFile;
+    public PLTdata[] getOptimizedPLT() {
+        return optimizedPltData;
+    }
+    
+    private int countTotalLines(PLTdata pd[]) {
+        int countLines = 0;
+        for (PLTdata p: pd) {
+            countLines += p.getPopulatedLines();
+            System.out.println("pen " + p.getPen() + " has " + p.getPopulatedLines() + "lines.");
+        }
+        return countLines;
     }
     
     public void saveToFile(File file) {
@@ -214,24 +263,22 @@ public class PLTfile {
         try {
             bw = new PrintWriter(new FileWriter(file));
             bw.write("IN;SC;PU;RO0;IP;IW;VS15");
-            int lastX = -1, lastY = -1, lastPen = -1;
-            byte pens[] = pltData.getPens();
-            int point_x[] = pltData.getPoint_x();
-            int point_y[] = pltData.getPoint_y();
-            int lines_1[] = pltData.getLines_1();
-            int lines_2[] = pltData.getLines_2();
-            for(int i=0; i<pltData.getPocetCar(); i++) {
-                if (pens[i] != lastPen) {
-                    bw.write(";SP"+pens[i]);
-                    lastPen = pens[i];
+            for (PLTdata p: pltData) {
+                int lastX = -1, lastY = -1;
+                int point_x[] = p.getPoint_x();
+                int point_y[] = p.getPoint_y();
+                int lines_1[] = p.getLines_1();
+                int lines_2[] = p.getLines_2();
+                bw.write(";SP"+p.getPen());
+                for(int i=0; i<p.getPocetCar(); i++) {
+                    if (point_x[lines_1[i]]!=lastX || point_y[lines_1[i]]!=lastY) {
+                        bw.write(";PUPA"+point_x[lines_1[i]]+","+point_y[lines_1[i]]+";PDPA"+point_x[lines_2[i]]+","+point_y[lines_2[i]]);
+                    } else {
+                        bw.write(","+point_x[lines_2[i]]+","+point_y[lines_2[i]]);
+                    }          
+                    lastX = point_x[lines_2[i]];
+                    lastY = point_y[lines_2[i]];
                 }
-                if (point_x[lines_1[i]]!=lastX || point_y[lines_1[i]]!=lastY) {
-                    bw.write(";PUPA"+point_x[lines_1[i]]+","+point_y[lines_1[i]]+";PDPA"+point_x[lines_2[i]]+","+point_y[lines_2[i]]);
-                } else {
-                    bw.write(","+point_x[lines_2[i]]+","+point_y[lines_2[i]]);
-                }          
-                lastX = point_x[lines_2[i]];
-                lastY = point_y[lines_2[i]];
             }
             bw.write(";PU;PA0,0;SP;");
         } catch (IOException ex) {
@@ -253,7 +300,10 @@ public class PLTfile {
     protected Object clone() {
         PLTfile p = new PLTfile();
         p.rawPLT = rawPLT;
-        p.pltData = (PLTdata) pltData.clone();
+        p.pltData = new PLTdata[pltData.length];
+        for (int i = 0; i < pltData.length; i++) {
+            p.pltData[i] = (PLTdata) pltData[i].clone();            
+        }
         return p;
     }
         
@@ -266,11 +316,11 @@ public class PLTfile {
         this.parent = parent;
     }
 
-    public PLTdata getPltData() {
+    public PLTdata[] getPltData() {
         return pltData;
     }
 
-    public void setPltData(PLTdata pltData) {
+    public void setPltData(PLTdata pltData[]) {
         this.pltData = pltData;
     }
 
@@ -278,4 +328,32 @@ public class PLTfile {
         this.settings = settings;
     }
 
+    public int getLinesCount() {
+        System.out.println("returning Lines count to superior function");
+        return countTotalLines(pltData);
+    }
+    
+    public int getLinesLength() {
+        int linesLength = 0;
+        for (PLTdata p: pltData) {
+            linesLength += p.getDelkaCar();
+        }
+        return linesLength;        
+    }
+
+    public int getTravelsCount() {
+        int travelsCount = 0;
+        for (PLTdata p: pltData) {
+            travelsCount += p.getPocetPrejezdu();
+        }
+        return travelsCount;        
+    }
+
+    public int getTravelsLength() {
+        int travelsLength = 0;
+        for (PLTdata p: pltData) {
+            travelsLength += p.getDelkaPrejezdu();
+        }
+        return travelsLength;        
+    }
 }

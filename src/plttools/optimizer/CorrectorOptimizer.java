@@ -19,6 +19,7 @@ public class CorrectorOptimizer extends AbstractOptimizer {
         int offsetY;
         PLTdata p = new PLTdata();
         p.setLineCount((int) (pd.getPocetCar()*1.5));
+        p.setPen(pd.getPen());
 
         if (settings.getCorrectorMoveToOrigin()) {
             offsetX = (int) (pd.getBoundingBox().getMinX() - settings.getCorrectorOffsetX());
@@ -53,13 +54,7 @@ public class CorrectorOptimizer extends AbstractOptimizer {
                 x1_2 = pd.getPoint_x()[l1_2];
                 y1_2 = pd.getPoint_y()[l1_2];
                 float lengthOfLine_i = pd.getLengthOfLine(i);
-                byte pen;
-                int debugLine = 45;
-                if (leaveOriginaLines) {
-                    pen = 4;
-                } else {
-                    pen = pd.getPens()[i];
-                }
+                int debugLine = 1000;
                 // skip already processed lines
                 if (lineProcessed[i]) {
                         System.out.println("line #" + i + " skipped (conditions: "
@@ -213,8 +208,7 @@ public class CorrectorOptimizer extends AbstractOptimizer {
                                 p.addLine(  lastX - offsetX,
                                             lastY - offsetY, 
                                             nextX - offsetX,
-                                            nextY - offsetY, 
-                                            pen); 
+                                            nextY - offsetY); 
                                 haveFirstPoint = true;
                             }
                             // and prepare variables for next run of finding next point on intersected line
@@ -239,7 +233,7 @@ public class CorrectorOptimizer extends AbstractOptimizer {
                 x1_2 = pd.getPoint_x()[l1_2];
                 y1_2 = pd.getPoint_y()[l1_2];
                 if (leaveOriginaLines || (! lineProcessed[i] && pd.calculateDistance(l1_1,l1_2) > threshold)) {
-                    p.addLine(x1_1 - offsetX, y1_1- offsetY, x1_2- offsetX, y1_2- offsetY, pd.getPens()[i]);  
+                    p.addLine(x1_1 - offsetX, y1_1- offsetY, x1_2- offsetX, y1_2- offsetY);  
                 }
             }
             
@@ -249,7 +243,7 @@ public class CorrectorOptimizer extends AbstractOptimizer {
 
             // connect all ENDpoints that are closer to each other than threshold
             for(i=0; i<p.getPocetBodu(); i++) {
-                System.out.println("Status of point #" + i + " = " + p.getStatusAtPoint(i));
+//                System.out.println("Status of point #" + i + " = " + p.getStatusAtPoint(i));
                 for(j=i+1; j<p.getPocetBodu(); j++) {
                     if((p.getDistance(i, j) < threshold) 
                             && !p.isLineBetween(i, j)
@@ -260,7 +254,7 @@ public class CorrectorOptimizer extends AbstractOptimizer {
                         y1_1 = p.getPoint_y()[i];
                         x1_2 = p.getPoint_x()[j];
                         y1_2 = p.getPoint_y()[j];
-                        p.addLine(x1_1 - offsetX, y1_1- offsetY, x1_2- offsetX, y1_2- offsetY, (byte) 1);
+                        p.addLine(x1_1 - offsetX, y1_1- offsetY, x1_2- offsetX, y1_2- offsetY);
                         p.calculateStats();
                     }
                 }
@@ -275,7 +269,7 @@ public class CorrectorOptimizer extends AbstractOptimizer {
                 y1 = pd.getPoint_y()[pd.getLines_1()[i]] - offsetY;
                 x2 = pd.getPoint_x()[pd.getLines_2()[i]] - offsetX;
                 y2 = pd.getPoint_y()[pd.getLines_2()[i]] - offsetY;
-                p.addLine(x1, y1, x2, y2, pd.getPens()[i]);
+                p.addLine(x1, y1, x2, y2);
 //                System.out.println("added line ["+x1+";" + y1 + "] ["+ x2 + ";" + y2 +"]");
             }
             p.calculateDistances();
