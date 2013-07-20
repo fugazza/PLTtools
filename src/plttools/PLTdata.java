@@ -50,46 +50,7 @@ public class PLTdata {
             }
             propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*i)/pocetBodu));            
         }
-        // set distance of points, that are common for just two lines to bad value
         propertySupport.firePropertyChange("progressMessage", null, "loops detection");
-//        int zeroDistCount;
-//        for (i=0; i<pocetBodu; i++) {
-//            zeroDistCount = 0;
-//            for (j=0; j<pocetBodu; j++) {
-//                if (distances[i][j]==0) {
-//                    zeroDistCount++;    
-//                }
-//            }
-//            System.out.println(i + ": zero dist count = " + zeroDistCount);
-//            lines_at_point[i] = zeroDistCount+1;
-//        }
-//        for (i=0; i<pocetBodu; i++) {
-//            if (lines_at_point[i]==2) {
-//                for (k=0; k<pocetCar; k++) {
-//                    if (lines_1[k]==i || lines_2[k]==i) {
-//                        break;
-//                    }
-//                }
-//                if (i==1272) {
-//                    System.out.println("is loop = "+findLoop(k)+"; k = "+k);
-//                }
-//                if (!findLoop(k)) {
-//                    for (j=0; j<i; j++) {
-//                        if (distances[i][j]!= 0) {
-//                            distances[i][j] = (float) (2*(boundingBox.getWidth()+boundingBox.getHeight()));
-//                            distances[j][i] = (float) (2*(boundingBox.getWidth()+boundingBox.getHeight()));
-//                        }
-//                    }
-//                }
-//            }
-//            propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*i)/pocetBodu));            
-//        }
-        
-        // set distance of all connected points best value
-//        for (i=0; i<pocetCar; i++) {
-//            distances[lines_1[i]][lines_2[i]] = -1.0f;
-//            distances[lines_2[i]][lines_1[i]] = -1.0f;
-//        }
         System.gc();
 //        System.out.println("Distances:");
 //        DecimalFormat format = new DecimalFormat("#####");
@@ -158,12 +119,12 @@ public class PLTdata {
     } 
 
     /**
-     * 1 = konec v bodě 1
-     * 2 = konec v bodě 2
-     * 3 = součást uzavřené smyčky
-     * 4 = součást polyčáry
-     * 5 = samostatná čára (konec na obou stranách)
-     * 6 = chyba
+     * 1 = end in point 1
+     * 2 = end in poing 2
+     * 3 = part of closed loop
+     * 4 = part of polyline
+     * 5 = single line (end in both points 1 and 2)
+     * 6 = error
      * @param index 
      * @param loopStart
      * @return status
@@ -436,7 +397,41 @@ public class PLTdata {
     public byte[] getStatus() {
         return status;
     }
+    
+    /**
+     * Return status of point
+     * 1 - endpoint
+     * 2 - part of contignuous line
+     * 3 - error
+     * @param point index of searched point
+     * @return status
+     */
+    public byte getStatusAtPoint(int point) {
+        for (int i=0; i<pocetCar; i++) {
+            if (point == lines_1[i] || point == lines_2[i]) {
+                if ((status[i] == 5)
+                        || (point == lines_1[i] && status[i] == 1)
+                        || (point == lines_2[i] && status[i] == 2)) {
+                    return (byte) 1;
+                } else if (status[i] == 3 || status[i] == 4) {
+                    return (byte) 2;
+                } else {
+                    return (byte) 3;
+                }
+            }
+        }
+        return (byte) 3;
+    }
 
+    /**
+     * returns information, if any line is ending at given point
+     * @param point point index number
+     * @return point is endopoint (true or false)
+     */
+    public boolean isEndPoint(int point) {
+        return getStatusAtPoint(point) == 1;
+    }
+    
     public Rectangle getBoundingBox() {
         return boundingBox;
     }

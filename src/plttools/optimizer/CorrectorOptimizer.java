@@ -170,15 +170,15 @@ public class CorrectorOptimizer extends AbstractOptimizer {
                 if (numDuplicities >0) {
                     // set the line i as having duplicities
                     lineProcessed[i] = true;
+                    
                     int lastX = -1;
                     int lastY = 0;   
                     int lastIntersecX = 0;
                     int lastIntersecY = 0;
                     int lastPoint;
                     int nextX, nextY;
-                    // add first and last midpoint
                     
-                    // and add another points into contignuous line
+                    // add points into contignuous line
                     boolean pointUsed[] = new boolean[numDuplicities];
                     double distance;
                     boolean haveFirstPoint = false;
@@ -190,8 +190,8 @@ public class CorrectorOptimizer extends AbstractOptimizer {
                         System.out.print("midpoint: ");
                         for (k=0; k<(numDuplicities); k++) {
                             System.out.print(k+ " ... ");
-                            // in next condition last point must be skipped
                             distance = calcDistance(lastIntersecX, lastIntersecY,(int) intersectPoints[k].getX(),(int) intersectPoints[k].getY());
+                            // in next condition all already conneted points must be skipped
                             if ((!pointUsed[k]) && (distance <= minDistance)) {
                                 lastPoint = k;
                                 minDistance = distance;                            
@@ -228,26 +228,9 @@ public class CorrectorOptimizer extends AbstractOptimizer {
                         }
                     }
                 }
-                // and add the line to end X, if it wasn't added already
-//                if (calcDistance(startX, startY,nextX,nextY) < lengthOfLine_i) {
-//                    System.out.println("line #"+i +": added final line");
-//                    p.addLine(  lastX - offsetX,
-//                                lastY - offsetY, 
-//                                endX - offsetX,
-//                                endY - offsetY, 
-//                                pd.getPens()[i]);
-//                }
-
-                
-                // if the line does not have duplicities and is longer than threshold 
-//                if (numDuplicities == 0) {
-//                if ((numDuplicities == 0) && pd.calculateDistance(l1_1,l1_2) > threshold) {
-                // set the line as processed not to return to them
-//                    p.addLine(x1_1 - offsetX, y1_1- offsetY, x1_2- offsetX, y1_2- offsetY, pd.getPens()[i]);    
-//                }
-
             }
             
+            // add all lines that do not have duplicities
             for(i=0; i<pd.getPocetCar();i++) {
                 l1_1 = pd.getLines_1()[i];
                 l1_2 = pd.getLines_2()[i];
@@ -259,8 +242,29 @@ public class CorrectorOptimizer extends AbstractOptimizer {
                     p.addLine(x1_1 - offsetX, y1_1- offsetY, x1_2- offsetX, y1_2- offsetY, pd.getPens()[i]);  
                 }
             }
+            
+            // recalculate statuses and distances
             p.calculateDistances();
             p.calculateStats();
+
+            // connect all ENDpoints that are closer to each other than threshold
+            for(i=0; i<p.getPocetBodu(); i++) {
+                System.out.println("Status of point #" + i + " = " + p.getStatusAtPoint(i));
+                for(j=i+1; j<p.getPocetBodu(); j++) {
+                    if((p.getDistance(i, j) < threshold) 
+                            && !p.isLineBetween(i, j)
+                            && p.isEndPoint(i)
+                            && p.isEndPoint(j)
+                            ) {
+                        x1_1 = p.getPoint_x()[i];
+                        y1_1 = p.getPoint_y()[i];
+                        x1_2 = p.getPoint_x()[j];
+                        y1_2 = p.getPoint_y()[j];
+                        p.addLine(x1_1 - offsetX, y1_1- offsetY, x1_2- offsetX, y1_2- offsetY, (byte) 1);
+                        p.calculateStats();
+                    }
+                }
+            }
             return p;
         } else if (settings.getCorrectorMoveToOrigin()) {
             System.out.println("offsets - X = "+offsetX+"; Y = " + offsetY );

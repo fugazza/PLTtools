@@ -5,3 +5,4 @@
 /dist/README.TXT
 # do not display temporary files
 *~
+/dist/
