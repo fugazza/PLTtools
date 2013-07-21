@@ -23,6 +23,7 @@ import plttools.optimizer.ModifiedGreedyOptimizer;
  */
 public class PLTfile {
 
+    private File myFile;
     private StringBuilder rawPLT;
     private PLTdata[] pltData;
     private PropertyChangeSupport propertySupport = new PropertyChangeSupport(this);
@@ -31,6 +32,7 @@ public class PLTfile {
     private SettingsData settings;
     
     public void readPLTfromFile(File file) {
+        myFile = file;
         BufferedReader reader = null;
         try {
             System.out.println("reading started");
@@ -364,4 +366,8 @@ public class PLTfile {
         }
         return travelsLength;        
     }
+
+    public File getFile() {
+        return myFile;
+    }   
 }

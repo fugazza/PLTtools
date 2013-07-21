@@ -44,6 +44,7 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
         });   
         pltFile.addPropertyChangeListener(PLTtools.this);
         pltFile.setSettings(settings);
+        pLTpanel1.setPlt(pltFile);
         executorService = Executors.newSingleThreadExecutor();        
     }
 
@@ -58,7 +59,6 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
         bindingGroup = new org.jdesktop.beansbinding.BindingGroup();
 
         jFileChooser1 = new javax.swing.JFileChooser();
-        penComboBoxModel1 = new plttools.GUI.PenComboBoxModel();
         jSplitPane1 = new javax.swing.JSplitPane();
         jPanel1 = new javax.swing.JPanel();
         jButton1 = new javax.swing.JButton();
@@ -382,8 +382,6 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
 
         jLabel10.setText("Pens to be processed");
 
-        jComboBox1.setModel(penComboBoxModel1);
-
         jButton2.setText("Optimize");
         jButton2.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -462,6 +460,7 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
     }// </editor-fold>//GEN-END:initComponents
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
+        jFileChooser1.setCurrentDirectory(pltFile.getFile());
         int result = jFileChooser1.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
             setTitle(jFileChooser1.getSelectedFile().getName()+" - PLT tools");
@@ -471,7 +470,7 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
                 protected Void doInBackground() throws Exception {
                     try {
                         pltFile.readPLTfromFile(jFileChooser1.getSelectedFile());
-                        pLTpanel1.setPlt(pltFile.getPltData());
+//                        pLTpanel1.setPlt(pltFile);
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -480,11 +479,7 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
 
                 @Override
                 protected void done() {
-                    jComboBox1.removeAllItems();
-                    jComboBox1.addItem((byte) -1);
-                    for (PLTdata p: pltFile.getPltData()) {
-                        jComboBox1.addItem(p.getPen());
-                    }
+                    fillComboBoxWithPens();
                 }                
                 
             };
@@ -513,7 +508,7 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
                 protected void done() {
                     PLTdata pltData[] = pltFile.getOptimizedPLT();
                     pltFile.setPltData(pltData);
-                    pLTpanel1.setPlt(pltData);            
+                    pLTpanel1.setPlt(pltFile);            
                     displayPLTStats();
                 }};      
             executorService.submit(sw);
@@ -539,7 +534,8 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
     public void propertyChange(PropertyChangeEvent evt) {
         if (evt.getPropertyName().equals("fileRead")) {
             System.out.println("reader: file read");
-            pLTpanel1.setPlt(pltFile.getPltData());   
+            pLTpanel1.setPlt(pltFile);   
+            fillComboBoxWithPens();
             displayPLTStats();
         } else if (evt.getPropertyName().equals("progressValue")) {
             jProgressBar1.setValue((Integer) evt.getNewValue());
@@ -556,6 +552,13 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
         jLabel1.setText("PLT info: lines " + pltFile.getLinesCount() + " (length " + pltFile.getLinesLength() + "); travels " + pltFile.getTravelsCount() + " (length " + pltFile.getTravelsLength() + ")");        
     }
     
+    private void fillComboBoxWithPens() {
+        jComboBox1.removeAllItems();
+        jComboBox1.addItem(new PenObject(-1));
+        for (PLTdata p: pltFile.getPltData()) {
+            jComboBox1.addItem(new PenObject(p.getPen()));
+        }        
+    }
     /**
      * @param args the command line arguments
      */
@@ -635,7 +638,6 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
     private javax.swing.JSpinner offsetXSpinner;
     private javax.swing.JSpinner offsetYSpinner;
     private plttools.GUI.PLTpanel pLTpanel1;
-    private plttools.GUI.PenComboBoxModel penComboBoxModel1;
     private javax.swing.JTextField thresholdTextField;
     private org.jdesktop.beansbinding.BindingGroup bindingGroup;
     // End of variables declaration//GEN-END:variables

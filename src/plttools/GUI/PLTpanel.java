@@ -7,9 +7,20 @@ package plttools.GUI;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Point;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
+import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.*;
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.JPanel;
+import javax.swing.TransferHandler;
 import plttools.PLTdata;
+import plttools.PLTfile;
 
 /**
  *
@@ -17,7 +28,7 @@ import plttools.PLTdata;
  */
 public class PLTpanel extends JPanel {
 
-    private PLTdata plt[];
+    private PLTfile plt;
     private double scale = 1.0;
     private final int margin = 3;
     private boolean kreslitPrejezdy = true;
@@ -59,18 +70,98 @@ public class PLTpanel extends JPanel {
             }
 
         });
+        
+        setTransferHandler( new TransferHandler() {
+            @Override
+            public boolean canImport(TransferHandler.TransferSupport support) {
+//                System.out.println("canImport : isDrop " + support.isDrop());
+//                for (DataFlavor df: support.getDataFlavors()) {
+//                    System.out.println("flavor "+ df.getHumanPresentableName() +"; " + df.toString());
+//                }
+//                System.out.println("\tfileListFlavor\t= " + support.isDataFlavorSupported(DataFlavor.javaFileListFlavor));
+//                System.out.println("\timageFlavor\t= " + support.isDataFlavorSupported(DataFlavor.imageFlavor));
+//                System.out.println("\tstringFlavor\t= " + support.isDataFlavorSupported(DataFlavor.stringFlavor));
+//                System.out.println("\tplainTextFlavor\t= " + support.isDataFlavorSupported(DataFlavor.plainTextFlavor));
+
+                if (!support.isDataFlavorSupported(DataFlavor.stringFlavor)) {
+                    return false;
+                }
+
+                boolean copySupported = (COPY & support.getSourceDropActions()) == COPY;
+//                System.out.println("\tcopySupported " + copySupported);
+
+                if (!copySupported) {
+                    return false;
+                }
+
+                support.setDropAction(COPY);
+
+                return true;
+            }
+
+            @Override
+            public boolean importData(TransferHandler.TransferSupport support) {
+                System.out.println("Import data:");
+                if (!canImport(support)) {
+                    return false;
+                }
+
+                Transferable t = support.getTransferable();
+//                DataFlavor myDf = new DataFlavor(Reader.class,"text/plain");
+//                for (DataFlavor df: support.getDataFlavors()) {
+//                    if (df.isFlavorTextType() && df.isRepresentationClassReader()) {
+//                        myDf = df;
+//                    }
+//                }
+
+                try {
+                    String filePath = (String) t.getTransferData(DataFlavor.stringFlavor);
+                    System.out.println(filePath);
+                    
+//                    BufferedReader br = new BufferedReader(myDf.getReaderForText(t));
+//                    String text = "";
+//                    while ((text = br.readLine()) != null) {
+//                        System.out.println(text);            
+//                    }
+                    
+                    URI uri = new URI(filePath);
+                    File f = new File(uri);
+                    System.out.println("file set to URI " + uri + " and starting to read file");
+                    plt.readPLTfromFile(f);
+                    System.out.println("file read, now repainting");
+                    setAutoScaleAndCenter();           
+                    repaint();
+                    System.out.println("finished");
+                } catch (URISyntaxException ex) {
+                    System.out.println(ex);
+                    Logger.getLogger(PLTpanel.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (UnsupportedFlavorException e) {
+                    System.out.println(e);
+                    return false;
+                } catch (IOException e) {
+                    System.out.println(e);
+                    return false;
+                } catch (Exception e) {
+                    System.out.println(e);
+                    return false;
+                }
+
+                return true;
+            }
+        }
+        );
     }
             
     
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        if (plt != null) {
+        if (plt != null && plt.getPltData() != null) {
             // draw the background for area for output of plot
             g.setColor(Color.WHITE);
             g.fillRect(transformX(0), transformY(maxY), transformX(maxX) - transformX(0), transformY(0) - transformY(maxY));
 //            System.out.println("drawing; scale = " + scale + "maxX = " + plt.getBoundingBox().getMaxX());
-            for (PLTdata p: plt) {
+            for (PLTdata p: plt.getPltData()) {
                 int lines_1[] = p.getLines_1();
                 int lines_2[] = p.getLines_2();
                 int point_x[] = p.getPoint_x();
@@ -195,7 +286,7 @@ public class PLTpanel extends JPanel {
         }
     }
 
-    public void setPlt(PLTdata plt[]) {
+    public void setPlt(PLTfile plt) {
         this.plt = plt;
         setAutoScaleAndCenter();           
         repaint();
@@ -237,8 +328,8 @@ public class PLTpanel extends JPanel {
         maxX = 0;
         maxY = 0;
         // get maximum X and Y from all plots
-        if (plt != null) {
-            for(PLTdata p: plt) {
+        if (plt != null && plt.getPltData() != null) {
+            for(PLTdata p: plt.getPltData()) {
 //                System.out.println("stats for pen "+ p.getPen()+"; lins count = "+ p.getPocetCar()+"; bounding box = " + p.getBoundingBox());
                 if (p.getBoundingBox().getMaxX() > maxX) {
                     maxX = (int) p.getBoundingBox().getMaxX();
