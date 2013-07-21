@@ -214,12 +214,12 @@ public class PLTfile {
                 break;
             case 1:
                 optimizer = new ModifiedGreedyOptimizer();
-//                System.out.println("Greedy alghoritm");
+//                System.out.println("modified Greedy alghoritm");
                 break;
             case 0:
             default:
                 optimizer = new GreedyOptimizer();
-//                System.out.println("modified Greedy alghoritm");
+//                System.out.println("Greedy alghoritm");
                 break;
         }      
         optimizer.addPropertyChangeListener(parent);
@@ -370,4 +370,27 @@ public class PLTfile {
     public File getFile() {
         return myFile;
     }   
+
+    public long getRequiredMemory(int alghoritm) {
+        int countPoints = 0;
+        for (PLTdata p: pltData) {
+            countPoints += p.getPocetBodu();
+        }
+        int countLines = getLinesCount();
+        switch(alghoritm) {
+            case 3:
+//                System.out.println("Corrector - required memory");
+                return 2*4*10*countLines + 2*4*countPoints + 50*1024*1024;
+            case 2:
+//                System.out.println("Ant Colony alghoritm - required memory");
+                return 2*4*10*countLines + countLines/8 + countPoints/8 + 4*countPoints + 2*4*countPoints*countPoints + 50*1024*1024;
+            case 1:
+//                System.out.println("modified Greedy alghoritm - required memory");
+                return 2*4*10*countLines + 2*4*countPoints + 50*1024*1024;
+            case 0:
+            default:
+//                System.out.println("Greedy alghoritm - required memory");
+                return 2*4*10*countLines + 2*4*countPoints + 50*1024*1024;
+        }      
+    }
 }
