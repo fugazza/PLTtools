@@ -7,9 +7,15 @@ package plttools;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.JFileChooser;
+import javax.swing.JOptionPane;
 import javax.swing.SwingWorker;
 import javax.swing.filechooser.FileFilter;
 
@@ -25,7 +31,7 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
     /**
      * Creates new form PLTtools
      */
-    public PLTtools() {
+    public PLTtools(String args[]) {
         initComponents();
         jFileChooser1.setFileFilter(new FileFilter() {
 
@@ -42,6 +48,12 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
         });   
         pltFile.addPropertyChangeListener(PLTtools.this);
         executorService = Executors.newSingleThreadExecutor();
+        if (args.length > 0) {
+            File f = new File(args[0]);
+            if (f.exists()) {
+                readFromFile(f);
+            }
+        }
     }
 
     /** This method is called from within the constructor to
@@ -168,17 +180,7 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
         int result = jFileChooser1.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
-            setTitle(jFileChooser1.getSelectedFile().getName()+" - PLT tools");
-            SwingWorker sw = new SwingWorker<Void, Void>() {
-
-                @Override
-                protected Void doInBackground() throws Exception {
-                    pltFile.readPLTfromFile(jFileChooser1.getSelectedFile());
-                    return null;
-                }
-                
-            };
-            executorService.submit(sw);            
+            readFromFile(jFileChooser1.getSelectedFile());
         }
 //        SwingWorker sw = new SwingWorker<Void, Void>() {
 //            @Override
@@ -194,21 +196,69 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
     }//GEN-LAST:event_jButton1ActionPerformed
 
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
+        long heapFreeSize = Runtime.getRuntime().maxMemory();
+        //JOptionPane.showMessageDialog(null, "K dispozici " + (heapFreeSize /1024 / 1024) + "MB; potřeba "+(pltFile.getRequiredMemory()/1024 / 1024) + "MB", "Množství paměti", JOptionPane.INFORMATION_MESSAGE);
+        System.out.print("maxMemory = " + (Runtime.getRuntime().maxMemory() / 1024 / 1024)
+                       + "; freeMemory = "+ (Runtime.getRuntime().freeMemory() / 1024 / 1024)
+                       + "; totalMemory = " + (Runtime.getRuntime().totalMemory() / 1024 / 1024)
+                       + "; required = " + (pltFile.getRequiredMemory() / 1024 / 1024));
+        if (heapFreeSize < pltFile.getRequiredMemory()) {
+            int result = JOptionPane.showConfirmDialog(null, "Nedostatek paměti pro optimalizace. K dispozici " + (heapFreeSize /1024 / 1024) + "MB; potřeba "+(pltFile.getRequiredMemory()/1024 / 1024) + "MB;\nRestartovat aplikaci s dostatečným množstvím paměti?", "Nedostatek paměti", JOptionPane.ERROR_MESSAGE);
+            if (result == JOptionPane.OK_OPTION) {
+                try {
+                    final String javaBin = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java";
+                    System.out.println("javaBin = " +javaBin);
+                    final File currentJar = new File(PLTtools.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+                    System.out.println("currentJar = " + currentJar);                    
+
+                    /* Build command: java -jar application.jar */
+                    final ArrayList<String> command = new ArrayList<String>();
+                    command.add(javaBin);
+                    int newMemory = Math.round(2f*pltFile.getRequiredMemory()/1024/1024);
+                    command.add("-Xmx"+newMemory+"m");
+                    if(currentJar.getName().endsWith(".jar")) {
+                        command.add("-jar");
+                        //command.add(currentJar.getPath());
+                        command.add("PLTtools.jar");
+                    } else {
+                        //command.add("-Duser.dir=\""+currentJar.getPath()+"\"");
+                        command.add("-Duser.dir=\"build" + File.separator + "classes\"");
+                        command.add("plttools.PLTtools");
+                    }
+                    command.add(jFileChooser1.getSelectedFile().getPath());
+                    System.out.println(command);
+                    final ProcessBuilder builder = new ProcessBuilder(command);
+                    builder.start();
+                    System.exit(0);
+                } catch (IOException ex) {
+                    Logger.getLogger(PLTtools.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (URISyntaxException ex) {
+                    Logger.getLogger(PLTfile.class.getName()).log(Level.SEVERE, null, ex);
+                }                
+            }                
+        }
+        
         if (pltFile != null) {
             SwingWorker sw = new SwingWorker<Void, Void>() {
 
                 @Override
                 protected Void doInBackground() throws Exception {
-                    pltFile.optimizePLT();
+                    try {
+                        pltFile.optimizePLT();
+                    } catch (OutOfMemoryError e) {
+                        JOptionPane.showMessageDialog(null, "Nedostatek paměti pro provedení optimalizace, optimalizace neproběhla.", "Nedostatek paměti", JOptionPane.ERROR_MESSAGE);
+                    }
                     return null;
                 }
 
                 @Override
                 protected void done() {
-                    pltFile = pltFile.getOptimizedPLT();
-                    pltFile.addPropertyChangeListener(PLTtools.this);
-                    pLTpanel1.setPlt(pltFile);            
-                    jLabel1.setText("PLT info: čar " + pltFile.getPocetCar() + " (délka " + Math.round(pltFile.getDelkaCar()) + "); přejezdů " + pltFile.getPocetPrejezdu() + " (délka " + Math.round(pltFile.getDelkaPrejezdu()) + ")");
+                    if (pltFile.getOptimizedPLT() != null) {
+                        pltFile = pltFile.getOptimizedPLT();
+                        pltFile.addPropertyChangeListener(PLTtools.this);
+                        pLTpanel1.setPlt(pltFile);            
+                        jLabel1.setText("PLT info: čar " + pltFile.getPocetCar() + " (délka " + Math.round(pltFile.getDelkaCar()) + "); přejezdů " + pltFile.getPocetPrejezdu() + " (délka " + Math.round(pltFile.getDelkaPrejezdu()) + ")");
+                    }
                 }};      
             executorService.submit(sw);
         }
@@ -247,10 +297,24 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
         }
     }
 
+    public final void readFromFile(final File f) {
+        setTitle(f.getName()+" - PLT tools");
+        SwingWorker sw = new SwingWorker<Void, Void>() {
+
+            @Override
+            protected Void doInBackground() throws Exception {
+                pltFile.readPLTfromFile(f);
+                return null;
+            }
+
+        };
+        executorService.submit(sw);            
+    }
+            
     /**
      * @param args the command line arguments
      */
-    public static void main(String args[]) {
+    public static void main(final String args[]) {
         /*
          * Set the Nimbus look and feel
          */
@@ -285,7 +349,7 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
 
             @Override
             public void run() {
-                new PLTtools().setVisible(true);
+                new PLTtools(args).setVisible(true);
             }
         });
     }

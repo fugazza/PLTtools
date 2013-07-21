@@ -17,6 +17,8 @@ import java.util.logging.Logger;
  */
 public class PLTfile {
 
+    private final int alghoritm = 3;
+
     private StringBuilder rawPLT;
     private int max_x = 0;
     private int max_y = 0;
@@ -292,7 +294,6 @@ public class PLTfile {
     } 
     
     public void optimizePLT() {
-        int alghoritm = 3;
         switch(alghoritm) {
             case 3:
                 optimizedFile = optimizationAntColony();
@@ -769,4 +770,16 @@ public class PLTfile {
         propertySupport.addPropertyChangeListener(listener);
     }
 
+    public long getRequiredMemory() {
+        switch(alghoritm) {
+            case 3:
+                return 2*4*10*pocetCar + pocetCar/8 + pocetBodu/8 + 4*pocetBodu + 2*4*pocetBodu*pocetBodu + 50*1024*1024;
+            case 2:
+                return 2*4*10*pocetCar + 2*4*pocetBodu + 50*1024*1024;
+            case 1:
+            default:
+                return 2*4*10*pocetCar + 2*4*pocetBodu + 50*1024*1024;
+        }        
+    }
+    
 }
