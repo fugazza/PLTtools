@@ -407,7 +407,8 @@ public class PLTdata {
      * Return status of point
      * 1 - endpoint
      * 2 - part of contignuous line
-     * 3 - error
+     * 3 - part of closed loop
+     * 4 - error
      * @param point index of searched point
      * @return status
      */
@@ -418,10 +419,12 @@ public class PLTdata {
                         || (point == lines_1[i] && status[i] == 1)
                         || (point == lines_2[i] && status[i] == 2)) {
                     return (byte) 1;
-                } else if (status[i] == 3 || status[i] == 4) {
+                } else if (status[i] == 4) {
                     return (byte) 2;
-                } else {
+                } else if (status[i] == 3) {
                     return (byte) 3;
+                } else {
+                    return (byte) 4;
                 }
             }
         }

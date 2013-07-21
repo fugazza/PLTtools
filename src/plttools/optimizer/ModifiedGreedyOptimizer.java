@@ -15,16 +15,16 @@ public class ModifiedGreedyOptimizer extends AbstractOptimizer {
     @Override
     public PLTdata optimize() {
         PLTdata p = new PLTdata();
-        boolean processed[] = new boolean[pd.getPocetCar()];
+        boolean processed[] = new boolean[pd.getPopulatedLines()];
         int numProcessed = 0;
         int lastX2 = 0, lastY2 = 0;
         int range = 0;
         int rangeNulling = 0;
         int vzdalenost1x, vzdalenost1y, vzdalenost2x, vzdalenost2y, vzdalenost1, vzdalenost2;
         int l1, l2, x1, y1, x2, y2;
-        p.setLineCount(pd.getPocetCar());
+        p.setLineCount(pd.getPopulatedLines());
         p.setPen(pd.getPen());
-        while (numProcessed < pd.getPocetCar()) {
+        while (numProcessed < pd.getPopulatedLines()) {
             System.out.println("processed="+numProcessed+"; range = "+range);
             boolean findLineStart = true;
             if (rangeNulling > 10) {
@@ -34,7 +34,7 @@ public class ModifiedGreedyOptimizer extends AbstractOptimizer {
             boolean haveLine;
             do {
                 haveLine = false;
-                for (int j=0; j<pd.getPocetCar(); j++) {
+                for (int j=0; j<pd.getPopulatedLines(); j++) {
                     if (processed[j]) {
 //                    if (processed[j]) {
                         continue;

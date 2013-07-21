@@ -195,12 +195,16 @@ public class PLTfile {
 //        }
     }
     
-    public void optimizePLT(int alghoritm) {
+    public void optimizePLT(int alghoritm, int pen) {
         AbstractOptimizer optimizer;
         switch(alghoritm) {
             case 3:
 //                System.out.println("Corrector");
                 optimizer = new CorrectorOptimizer();
+                ((CorrectorOptimizer) optimizer).boundingBox = pltData[0].getBoundingBox();
+                for (PLTdata p: pltData) {
+                    ((CorrectorOptimizer) optimizer).boundingBox.add(p.getBoundingBox());
+                }
                 break;
             case 2:
 //                System.out.println("Ant Colony alghoritm");
@@ -223,9 +227,13 @@ public class PLTfile {
         try {
             optimizedPltData = new PLTdata[pltData.length];
             for (int i=0; i<pltData.length; i++) {
-                optimizer.setData(pltData[i]);
-                optimizedPltData[i] = optimizer.optimize();
-                optimizedPltData[i].calculateStats();
+                if (pen == -1 || pltData[i].getPen() == pen) {
+                    optimizer.setData(pltData[i]);
+                    optimizedPltData[i] = optimizer.optimize();
+                    optimizedPltData[i].calculateStats();
+                } else {
+                    optimizedPltData[i] = pltData[i];
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -253,7 +261,7 @@ public class PLTfile {
         int countLines = 0;
         for (PLTdata p: pd) {
             countLines += p.getPopulatedLines();
-            System.out.println("pen " + p.getPen() + " has " + p.getPopulatedLines() + "lines.");
+            System.out.println("pen " + p.getPen() + " has " + p.getPopulatedLines() + " lines.");
         }
         return countLines;
     }

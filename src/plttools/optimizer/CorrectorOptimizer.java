@@ -5,6 +5,7 @@
 package plttools.optimizer;
 
 import java.awt.Point;
+import java.awt.Rectangle;
 import plttools.PLTdata;
 
 /**
@@ -13,17 +14,20 @@ import plttools.PLTdata;
  */
 public class CorrectorOptimizer extends AbstractOptimizer {
 
+    public Rectangle boundingBox;
+    
     @Override
     public PLTdata optimize() {
-        int offsetX;
-        int offsetY;
+        int offsetX = 0;
+        int offsetY = 0;
         PLTdata p = new PLTdata();
-        p.setLineCount((int) (pd.getPocetCar()*1.5));
+        p.setLineCount((int) (pd.getPopulatedLines()*1.5));
         p.setPen(pd.getPen());
 
         if (settings.getCorrectorMoveToOrigin()) {
-            offsetX = (int) (pd.getBoundingBox().getMinX() - settings.getCorrectorOffsetX());
-            offsetY = (int) (pd.getBoundingBox().getMinY() - settings.getCorrectorOffsetY());
+            offsetX = (int) (boundingBox.getMinX() - settings.getCorrectorOffsetX());
+            offsetY = (int) (boundingBox.getMinY() - settings.getCorrectorOffsetY());
+            System.out.println("offsets - X = "+offsetX+"; Y = " + offsetY );            
         } else {
             offsetX = 0;
             offsetY = 0;            
@@ -40,13 +44,13 @@ public class CorrectorOptimizer extends AbstractOptimizer {
             boolean leaveOriginaLines = false;
             
             pd.calculateDistances();
-            boolean lineProcessed[] = new boolean[pd.getPocetCar()];
-            for(i=0; i<pd.getPocetCar();i++) {
+            boolean lineProcessed[] = new boolean[pd.getPopulatedLines()];
+            for(i=0; i<pd.getPopulatedLines();i++) {
                 lineProcessed[i] = false;
             }
             
             // go through all lines
-            for(i=0; i<pd.getPocetCar();i++) {
+            for(i=0; i<pd.getPopulatedLines();i++) {
                 l1_1 = pd.getLines_1()[i];
                 l1_2 = pd.getLines_2()[i];
                 x1_1 = pd.getPoint_x()[l1_1];
@@ -68,8 +72,8 @@ public class CorrectorOptimizer extends AbstractOptimizer {
                 Point midPoints[] = new Point[2*maxDuplicities];
                 Point intersectPoints[] = new Point[2*maxDuplicities];
                 int numDuplicities = 0;
-                // pass through all lines, there might be shorter linex, that will be processed with longer lines later
-                for(j=0; j<pd.getPocetCar(); j++) {
+                // pass through all lines, there might be shorter line, that will be processed with longer lines later
+                for(j=0; j<pd.getPopulatedLines(); j++) {
                     // skip already processed lines, identic lines, lines that are longer that line i and lines, that are part of contignuous line
                     l2_1 = pd.getLines_1()[j];
                     l2_2 = pd.getLines_2()[j];
@@ -225,7 +229,7 @@ public class CorrectorOptimizer extends AbstractOptimizer {
             }
             
             // add all lines that do not have duplicities
-            for(i=0; i<pd.getPocetCar();i++) {
+            for(i=0; i<pd.getPopulatedLines();i++) {
                 l1_1 = pd.getLines_1()[i];
                 l1_2 = pd.getLines_2()[i];
                 x1_1 = pd.getPoint_x()[l1_1];
@@ -254,17 +258,15 @@ public class CorrectorOptimizer extends AbstractOptimizer {
                         y1_1 = p.getPoint_y()[i];
                         x1_2 = p.getPoint_x()[j];
                         y1_2 = p.getPoint_y()[j];
-                        p.addLine(x1_1 - offsetX, y1_1- offsetY, x1_2- offsetX, y1_2- offsetY);
+                        p.addLine(x1_1, y1_1, x1_2, y1_2);
                         p.calculateStats();
                     }
                 }
             }
             return p;
         } else if (settings.getCorrectorMoveToOrigin()) {
-            System.out.println("offsets - X = "+offsetX+"; Y = " + offsetY );
-
             int x1, y1, x2, y2;
-            for(int i=0; i< pd.getPocetCar(); i++) {
+            for(int i=0; i< pd.getPopulatedLines(); i++) {
                 x1 = pd.getPoint_x()[pd.getLines_1()[i]] - offsetX;
                 y1 = pd.getPoint_y()[pd.getLines_1()[i]] - offsetY;
                 x2 = pd.getPoint_x()[pd.getLines_2()[i]] - offsetX;

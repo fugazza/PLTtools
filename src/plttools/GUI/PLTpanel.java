@@ -2,13 +2,14 @@
  * To change this template, choose Tools | Templates and open the template in
  * the editor.
  */
-package plttools;
+package plttools.GUI;
 
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Point;
 import java.awt.event.*;
 import javax.swing.JPanel;
+import plttools.PLTdata;
 
 /**
  *
@@ -152,7 +153,7 @@ public class PLTpanel extends JPanel {
         return (int) (getHeight()/2 - ((y-centerY) * scale));
     }
 
-    private Color getColorForPen(int pen) {
+    public static Color getColorForPen(int pen) {
         switch (pen) {
             case -1:
                 return Color.RED;
