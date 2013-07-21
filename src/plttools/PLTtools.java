@@ -4,6 +4,8 @@
  */
 package plttools;
 
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
@@ -226,6 +228,11 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
         );
 
         jTabbedPane1.setBorder(javax.swing.BorderFactory.createTitledBorder("Optimizer Settings"));
+        jTabbedPane1.addChangeListener(new javax.swing.event.ChangeListener() {
+            public void stateChanged(javax.swing.event.ChangeEvent evt) {
+                jTabbedPane1StateChanged(evt);
+            }
+        });
 
         jLabel8.setText("No settings for greedy algorithm");
 
@@ -297,11 +304,6 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
         jTabbedPane1.addTab("Ant Colony", jPanel5);
 
         moveToOriginCheckBox.setText("move left bottom corner to origin");
-        moveToOriginCheckBox.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                moveToOriginCheckBoxActionPerformed(evt);
-            }
-        });
 
         jLabel3.setText("distance of left bottom corner from origin");
 
@@ -317,11 +319,6 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
 
         mergeIdenticCheckBox.setSelected(true);
         mergeIdenticCheckBox.setText("merge identic lines");
-        mergeIdenticCheckBox.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                mergeIdenticCheckBoxActionPerformed(evt);
-            }
-        });
 
         jLabel6.setText("Threshold");
 
@@ -388,9 +385,11 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
         jPanel7.setBorder(javax.swing.BorderFactory.createTitledBorder("Optimizer, that will be used"));
 
         alghoritmComboBox.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "Greedy", "Modified Greedy", "Ant Colony", "Corrector" }));
-
-        binding = org.jdesktop.beansbinding.Bindings.createAutoBinding(org.jdesktop.beansbinding.AutoBinding.UpdateStrategy.READ_WRITE, jTabbedPane1, org.jdesktop.beansbinding.ELProperty.create("${selectedIndex}"), alghoritmComboBox, org.jdesktop.beansbinding.BeanProperty.create("selectedIndex"));
-        bindingGroup.addBinding(binding);
+        alghoritmComboBox.addItemListener(new java.awt.event.ItemListener() {
+            public void itemStateChanged(java.awt.event.ItemEvent evt) {
+                alghoritmComboBoxItemStateChanged(evt);
+            }
+        });
 
         jLabel10.setText("Pens to be processed");
 
@@ -562,13 +561,20 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
         }
     }//GEN-LAST:event_jButton3ActionPerformed
 
-    private void mergeIdenticCheckBoxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mergeIdenticCheckBoxActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_mergeIdenticCheckBoxActionPerformed
+    private void alghoritmComboBoxItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_alghoritmComboBoxItemStateChanged
+//        System.out.println("ItemEvent = " + evt);
+        if ((evt.getStateChange() == ItemEvent.SELECTED) && (jTabbedPane1.getTabCount() > alghoritmComboBox.getSelectedIndex())) {
+//            System.out.println("select tab #" + alghoritmComboBox.getSelectedIndex());
+            jTabbedPane1.setSelectedIndex(alghoritmComboBox.getSelectedIndex());
+        }
+    }//GEN-LAST:event_alghoritmComboBoxItemStateChanged
 
-    private void moveToOriginCheckBoxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_moveToOriginCheckBoxActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_moveToOriginCheckBoxActionPerformed
+    private void jTabbedPane1StateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_jTabbedPane1StateChanged
+        if (alghoritmComboBox.getItemCount() > jTabbedPane1.getSelectedIndex()) {
+//            System.out.println("select option #" + jTabbedPane1.getSelectedIndex());
+            alghoritmComboBox.setSelectedIndex(jTabbedPane1.getSelectedIndex());
+        }
+    }//GEN-LAST:event_jTabbedPane1StateChanged
 
     @Override
     public void propertyChange(PropertyChangeEvent evt) {
