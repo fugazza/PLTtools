@@ -15,6 +15,8 @@ public class SettingsData {
     private int correctorOffsetY;
     private boolean correctorMergeIdentic;
     private float correctorTolerance;
+    private float correctorLimitAngle;
+    private int correctorDebugLine;
     
     private int antCount;
 
@@ -64,6 +66,22 @@ public class SettingsData {
 
     public void setAntCount(int antCount) {
         this.antCount = antCount;
+    }
+
+    public float getCorrectorLimitAngle() {
+        return correctorLimitAngle;
+    }
+
+    public void setCorrectorLimitAngle(float correctorLimitAngle) {
+        this.correctorLimitAngle = correctorLimitAngle;
+    }
+
+    public int getCorrectorDebugLine() {
+        return correctorDebugLine;
+    }
+
+    public void setCorrectorDebugLine(int correctorDebugLine) {
+        this.correctorDebugLine = correctorDebugLine;
     }
     
 }

@@ -5,12 +5,12 @@
 package plttools;
 
 import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -104,6 +104,11 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
         jLabel6 = new javax.swing.JLabel();
         thresholdTextField = new javax.swing.JTextField();
         jLabel7 = new javax.swing.JLabel();
+        jLabel11 = new javax.swing.JLabel();
+        jLabel12 = new javax.swing.JLabel();
+        angleTextField = new javax.swing.JTextField();
+        jLabel13 = new javax.swing.JLabel();
+        debugLineTextField = new javax.swing.JTextField();
         jPanel7 = new javax.swing.JPanel();
         alghoritmComboBox = new javax.swing.JComboBox();
         jLabel10 = new javax.swing.JLabel();
@@ -150,7 +155,7 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
         );
         pLTpanel1Layout.setVerticalGroup(
             pLTpanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 478, Short.MAX_VALUE)
+            .addGap(0, 493, Short.MAX_VALUE)
         );
 
         jLabel1.setText("PLT info:");
@@ -250,7 +255,7 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
             .addGroup(jPanel4Layout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(jLabel8)
-                .addContainerGap(163, Short.MAX_VALUE))
+                .addContainerGap(230, Short.MAX_VALUE))
         );
 
         jTabbedPane1.addTab("Greedy", jPanel4);
@@ -271,7 +276,7 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
             .addGroup(jPanel8Layout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(jLabel9)
-                .addContainerGap(163, Short.MAX_VALUE))
+                .addContainerGap(230, Short.MAX_VALUE))
         );
 
         jTabbedPane1.addTab("Modified Greedy", jPanel8);
@@ -298,7 +303,7 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
                 .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel2)
                     .addComponent(antCountSpinner, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(152, Short.MAX_VALUE))
+                .addContainerGap(219, Short.MAX_VALUE))
         );
 
         jTabbedPane1.addTab("Ant Colony", jPanel5);
@@ -329,6 +334,22 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
 
         jLabel7.setText("mm");
 
+        jLabel11.setText("Limit angle");
+
+        jLabel12.setText("Debug line");
+
+        angleTextField.setText("8");
+
+        binding = org.jdesktop.beansbinding.Bindings.createAutoBinding(org.jdesktop.beansbinding.AutoBinding.UpdateStrategy.READ_WRITE, mergeIdenticCheckBox, org.jdesktop.beansbinding.ELProperty.create("${selected}"), angleTextField, org.jdesktop.beansbinding.BeanProperty.create("enabled"));
+        bindingGroup.addBinding(binding);
+
+        jLabel13.setText("degrees");
+
+        debugLineTextField.setText("55");
+
+        binding = org.jdesktop.beansbinding.Bindings.createAutoBinding(org.jdesktop.beansbinding.AutoBinding.UpdateStrategy.READ_WRITE, mergeIdenticCheckBox, org.jdesktop.beansbinding.ELProperty.create("${selected}"), debugLineTextField, org.jdesktop.beansbinding.BeanProperty.create("enabled"));
+        bindingGroup.addBinding(binding);
+
         javax.swing.GroupLayout jPanel6Layout = new javax.swing.GroupLayout(jPanel6);
         jPanel6.setLayout(jPanel6Layout);
         jPanel6Layout.setHorizontalGroup(
@@ -346,14 +367,26 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(offsetYSpinner, javax.swing.GroupLayout.PREFERRED_SIZE, 55, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addComponent(mergeIdenticCheckBox)
+                    .addComponent(moveToOriginCheckBox)
                     .addGroup(jPanel6Layout.createSequentialGroup()
-                        .addComponent(jLabel6)
+                        .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                            .addGroup(javax.swing.GroupLayout.Alignment.LEADING, jPanel6Layout.createSequentialGroup()
+                                .addComponent(jLabel12)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(debugLineTextField))
+                            .addGroup(javax.swing.GroupLayout.Alignment.LEADING, jPanel6Layout.createSequentialGroup()
+                                .addComponent(jLabel6)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(thresholdTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 59, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(javax.swing.GroupLayout.Alignment.LEADING, jPanel6Layout.createSequentialGroup()
+                                .addComponent(jLabel11)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(angleTextField)))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(thresholdTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 59, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jLabel7))
-                    .addComponent(moveToOriginCheckBox))
-                .addContainerGap(100, Short.MAX_VALUE))
+                        .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel7)
+                            .addComponent(jLabel13))))
+                .addGap(100, 100, 100))
         );
         jPanel6Layout.setVerticalGroup(
             jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -371,11 +404,21 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
                 .addGap(18, 18, 18)
                 .addComponent(mergeIdenticCheckBox)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel6)
-                    .addComponent(thresholdTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                        .addComponent(jLabel6)
+                        .addComponent(thresholdTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addComponent(jLabel7))
-                .addContainerGap(14, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel11)
+                    .addComponent(angleTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel13))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel12)
+                    .addComponent(debugLineTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         jTabbedPane1.addTab("Corrector", jPanel6);
@@ -385,6 +428,7 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
         jPanel7.setBorder(javax.swing.BorderFactory.createTitledBorder("Optimizer, that will be used"));
 
         alghoritmComboBox.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "Greedy", "Modified Greedy", "Ant Colony", "Corrector" }));
+        alghoritmComboBox.setSelectedIndex(3);
         alghoritmComboBox.addItemListener(new java.awt.event.ItemListener() {
             public void itemStateChanged(java.awt.event.ItemEvent evt) {
                 alghoritmComboBoxItemStateChanged(evt);
@@ -432,12 +476,12 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
         jPanel2.setLayout(jPanel2Layout);
         jPanel2Layout.setHorizontalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel2Layout.createSequentialGroup()
+            .addGroup(jPanel2Layout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(jPanel7, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jTabbedPane1, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 465, Short.MAX_VALUE)
-                    .addComponent(jPanel3, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jTabbedPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 465, Short.MAX_VALUE)
+                    .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jPanel7, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap())
         );
         jPanel2Layout.setVerticalGroup(
@@ -446,10 +490,10 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
                 .addContainerGap()
                 .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jTabbedPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 260, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(jTabbedPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 327, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jPanel7, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(64, Short.MAX_VALUE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         jSplitPane1.setRightComponent(jPanel2);
@@ -462,7 +506,7 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jSplitPane1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 601, Short.MAX_VALUE)
+            .addComponent(jSplitPane1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 616, Short.MAX_VALUE)
         );
 
         bindingGroup.bind();
@@ -528,6 +572,8 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
             settings.setCorrectorMoveToOrigin(moveToOriginCheckBox.isSelected());
             settings.setCorrectorOffsetX((Integer) offsetXSpinner.getValue());
             settings.setCorrectorOffsetY((Integer) offsetYSpinner.getValue());
+            settings.setCorrectorLimitAngle(Float.valueOf(angleTextField.getText()));
+            settings.setCorrectorDebugLine(Integer.valueOf(debugLineTextField.getText()));
             
             SwingWorker sw = new SwingWorker<Void, Void>() {
 
@@ -595,7 +641,11 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
     }
 
     private void displayPLTStats() {
-        jLabel1.setText("PLT info: lines " + pltFile.getLinesCount() + " (length " + pltFile.getLinesLength() + "); travels " + pltFile.getTravelsCount() + " (length " + pltFile.getTravelsLength() + ")");        
+        DecimalFormat format = new DecimalFormat("######");
+        float pltScale = 400;
+        String linesLength = format.format(pltFile.getLinesLength()/pltScale);
+        String travelsLength = format.format(pltFile.getTravelsLength()/pltScale);
+        jLabel1.setText("PLT info: lines " + pltFile.getLinesCount() + " (length " + linesLength + " mm); travels " + pltFile.getTravelsCount() + " (length " + travelsLength + " mm)");        
     }
     
     private void fillComboBoxWithPens() {
@@ -664,7 +714,9 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
     }
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JComboBox alghoritmComboBox;
+    private javax.swing.JTextField angleTextField;
     private javax.swing.JSpinner antCountSpinner;
+    private javax.swing.JTextField debugLineTextField;
     private javax.swing.JButton jButton1;
     private javax.swing.JButton jButton2;
     private javax.swing.JButton jButton3;
@@ -675,6 +727,9 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
     private javax.swing.JFileChooser jFileChooser1;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel10;
+    private javax.swing.JLabel jLabel11;
+    private javax.swing.JLabel jLabel12;
+    private javax.swing.JLabel jLabel13;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;

@@ -14,6 +14,7 @@ public class ModifiedGreedyOptimizer extends AbstractOptimizer {
 
     @Override
     public PLTdata optimize() {
+        propertySupport.firePropertyChange("progressMessage", null, "modified greedy optimization");
         PLTdata p = new PLTdata();
         boolean processed[] = new boolean[pd.getPopulatedLines()];
         int numProcessed = 0;
@@ -26,6 +27,7 @@ public class ModifiedGreedyOptimizer extends AbstractOptimizer {
         p.setPen(pd.getPen());
         while (numProcessed < pd.getPopulatedLines()) {
             System.out.println("processed="+numProcessed+"; range = "+range);
+            propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*numProcessed)/pd.getPopulatedLines()));                            
             boolean findLineStart = true;
             if (rangeNulling > 10) {
                 findLineStart = false;
@@ -94,6 +96,7 @@ public class ModifiedGreedyOptimizer extends AbstractOptimizer {
         }
         
         p.calculatePathLengths();
+        propertySupport.firePropertyChange("progressFinished", false, true);
         return p;
     }
 

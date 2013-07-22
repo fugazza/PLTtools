@@ -14,7 +14,9 @@ public class GreedyOptimizer extends AbstractOptimizer {
 
     @Override
     public PLTdata optimize() {
+        propertySupport.firePropertyChange("progressMessage", null, "greedy optimization");
         PLTdata p = new PLTdata();
+        p.addPropertyChangeListener(propertySupport.getPropertyChangeListeners()[0]);
         p.setPen(pd.getPen());        
         pd.calculateDistances();
         int numLinesProcessed = 0;
@@ -49,6 +51,7 @@ public class GreedyOptimizer extends AbstractOptimizer {
         
         // connect all other points        
         while (numPointsProcessed < numEvaluatedPoints && numLinesProcessed < pd.getPopulatedLines()) {
+            propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*numPointsProcessed)/numEvaluatedPoints));                            
             System.out.println("last point: "+lastPoint+"["+pd.getPoint_x()[lastPoint]+","+pd.getPoint_y()[lastPoint]+"]");
             minDist = 2*(pd.getBoundingBox().getWidth()+pd.getBoundingBox().getHeight());
             for(i=0; i<pd.getPocetBodu(); i++) {
@@ -89,6 +92,7 @@ public class GreedyOptimizer extends AbstractOptimizer {
         }
         System.out.println("total lines = "+pd.getPopulatedLines() + "; num of processed lines = "+numLinesProcessed+ "; num of processed points = "+numPointsProcessed);
         p.calculatePathLengths();
+        propertySupport.firePropertyChange("progressFinished", false, true);
         return p;
     }
    

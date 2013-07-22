@@ -22,6 +22,7 @@ public class AntColonyOptimizer extends AbstractOptimizer {
 //        System.out.println("property fired");
         PLTdata p = new PLTdata();
         p.setPen(pd.getPen());
+        p.addPropertyChangeListener(propertySupport.getPropertyChangeListeners()[0]);
         pd.calculateDistances();
 //        System.out.println("distances calculated");
         int numProcessed;

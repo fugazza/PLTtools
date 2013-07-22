@@ -185,6 +185,7 @@ public class PLTfile {
         }
 
         for (PLTdata p: pltData) {
+            p.addPropertyChangeListener(parent);
             p.calculatePathLengths();
             p.calculateStats();            
         }
@@ -232,6 +233,7 @@ public class PLTfile {
                 if (pen == -1 || pltData[i].getPen() == pen) {
                     optimizer.setData(pltData[i]);
                     optimizedPltData[i] = optimizer.optimize();
+                    optimizedPltData[i].addPropertyChangeListener(parent);
                     optimizedPltData[i].calculateStats();
                 } else {
                     optimizedPltData[i] = pltData[i];

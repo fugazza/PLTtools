@@ -18,11 +18,15 @@ public class CorrectorOptimizer extends AbstractOptimizer {
     
     @Override
     public PLTdata optimize() {
+        propertySupport.firePropertyChange("progressMessage", null, "correction started");
+        int debugLine = settings.getCorrectorDebugLine();
+        float limitAngle = settings.getCorrectorLimitAngle(); // degrees
         int offsetX = 0;
         int offsetY = 0;
         PLTdata p = new PLTdata();
         p.setLineCount((int) (pd.getPopulatedLines()*1.5));
         p.setPen(pd.getPen());
+        p.addPropertyChangeListener(propertySupport.getPropertyChangeListeners()[0]);
 
         if (settings.getCorrectorMoveToOrigin()) {
             offsetX = (int) (boundingBox.getMinX() - settings.getCorrectorOffsetX());
@@ -51,6 +55,8 @@ public class CorrectorOptimizer extends AbstractOptimizer {
             
             // go through all lines
             for(i=0; i<pd.getPopulatedLines();i++) {
+                propertySupport.firePropertyChange("progressMessage", null, "Searching duplicities for line #"+i);
+                propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*i)/pd.getPopulatedLines()));                            
                 l1_1 = pd.getLines_1()[i];
                 l1_2 = pd.getLines_2()[i];
                 x1_1 = pd.getPoint_x()[l1_1];
@@ -58,7 +64,6 @@ public class CorrectorOptimizer extends AbstractOptimizer {
                 x1_2 = pd.getPoint_x()[l1_2];
                 y1_2 = pd.getPoint_y()[l1_2];
                 float lengthOfLine_i = pd.getLengthOfLine(i);
-                int debugLine = 1000;
                 // skip already processed lines
                 if (lineProcessed[i]) {
                         System.out.println("line #" + i + " skipped (conditions: "
@@ -77,7 +82,7 @@ public class CorrectorOptimizer extends AbstractOptimizer {
                     // skip already processed lines, identic lines, lines that are longer that line i and lines, that are part of contignuous line
                     l2_1 = pd.getLines_1()[j];
                     l2_2 = pd.getLines_2()[j];
-                    if (lineProcessed[j] || (i==j) || (pd.getLengthOfLine(j) > lengthOfLine_i) || (pd.angleBetweenLines(i,j)>5)
+                    if (lineProcessed[j] || (i==j) || (pd.getLengthOfLine(j) > lengthOfLine_i) || (pd.angleBetweenLines(i,j)>limitAngle)
                             || (l1_1 == l2_1) || (l1_1 == l2_2) || (l1_2 == l2_1) || (l1_2 == l2_2)) {
                         if (i==debugLine) {
                             System.out.println("line #"+i+" - line #" + j + " skipped (conditions: "
@@ -139,7 +144,7 @@ public class CorrectorOptimizer extends AbstractOptimizer {
                             intersectPoints[numDuplicities] = intersect1;
                             midPoints[numDuplicities] = new Point( (int)((intersect1.getX() + x2_1)/2), (int)((intersect1.getY() + y2_1)/2));
                         }
-                        System.out.println("\t\t\t ["+midPoints[numDuplicities]+"] for intersection ["+intersectPoints[numDuplicities]+"]");
+//                        System.out.println("\t\t\t ["+midPoints[numDuplicities]+"] for intersection ["+intersectPoints[numDuplicities]+"]");
                         numDuplicities++;                            
                         
                         if ((distance_22_11 < 2*threshold) && (distance_22_11 < distance_22_12)) {
@@ -153,7 +158,7 @@ public class CorrectorOptimizer extends AbstractOptimizer {
                             intersectPoints[numDuplicities] = intersect2;
                             midPoints[numDuplicities] = new Point( (int)((intersect2.getX() + x2_2)/2), (int)((intersect2.getY() + y2_2)/2));
                         }
-                        System.out.println("\t\t\t ["+midPoints[numDuplicities]+"] for intersection ["+intersectPoints[numDuplicities]+"]");
+//                        System.out.println("\t\t\t ["+midPoints[numDuplicities]+"] for intersection ["+intersectPoints[numDuplicities]+"]");
                         numDuplicities++;                            
 
                         lineProcessed[j] = true;
@@ -186,9 +191,9 @@ public class CorrectorOptimizer extends AbstractOptimizer {
 
                         lastPoint = -1;
                         // first find the point which is next one in the line
-                        System.out.print("midpoint: ");
+//                        System.out.print("midpoint: ");
                         for (k=0; k<(numDuplicities); k++) {
-                            System.out.print(k+ " ... ");
+//                            System.out.print(k+ " ... ");
                             distance = calcDistance(lastIntersecX, lastIntersecY,(int) intersectPoints[k].getX(),(int) intersectPoints[k].getY());
                             // in next condition all already conneted points must be skipped
                             if ((!pointUsed[k]) && (distance <= minDistance)) {
@@ -197,7 +202,7 @@ public class CorrectorOptimizer extends AbstractOptimizer {
                             }
                         }
                         System.out.println();
-                        System.out.println("last point = "+lastPoint);
+//                        System.out.println("last point = "+lastPoint);
 
                         // now we have next point
                         if (lastPoint >= 0) {
@@ -208,7 +213,7 @@ public class CorrectorOptimizer extends AbstractOptimizer {
                             if ((lastX >= 0)
                                     && (minDistance > 0.025 || (!haveFirstPoint && minDistance != 0))
                                     && !(lastX==nextX && lastY==nextY)) { // && pd.isPointInLine(intersectPoints[lastPoint], i)
-                                System.out.println("line #"+i +": added duplicate line #" + j + " between ["+lastX+";"+lastY+"] and ["+nextX+";"+nextY+"]");
+//                                System.out.println("line #"+i +": added duplicate line #" + j + " between ["+lastX+";"+lastY+"] and ["+nextX+";"+nextY+"]");
                                 p.addLine(  lastX - offsetX,
                                             lastY - offsetY, 
                                             nextX - offsetX,
@@ -246,7 +251,9 @@ public class CorrectorOptimizer extends AbstractOptimizer {
             p.calculateStats();
 
             // connect all ENDpoints that are closer to each other than threshold
+            propertySupport.firePropertyChange("progressMessage", null, "connecting close endpoints");
             for(i=0; i<p.getPocetBodu(); i++) {
+                propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*i)/p.getPocetBodu()));                            
 //                System.out.println("Status of point #" + i + " = " + p.getStatusAtPoint(i));
                 for(j=i+1; j<p.getPocetBodu(); j++) {
                     if((p.getDistance(i, j) < threshold) 
@@ -266,7 +273,9 @@ public class CorrectorOptimizer extends AbstractOptimizer {
             return p;
         } else if (settings.getCorrectorMoveToOrigin()) {
             int x1, y1, x2, y2;
+            propertySupport.firePropertyChange("progressMessage", null, "moving plot");
             for(int i=0; i< pd.getPopulatedLines(); i++) {
+                propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*i)/pd.getPopulatedLines()));                            
                 x1 = pd.getPoint_x()[pd.getLines_1()[i]] - offsetX;
                 y1 = pd.getPoint_y()[pd.getLines_1()[i]] - offsetY;
                 x2 = pd.getPoint_x()[pd.getLines_2()[i]] - offsetX;

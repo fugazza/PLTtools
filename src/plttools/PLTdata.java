@@ -50,7 +50,6 @@ public class PLTdata {
             }
             propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*i)/pocetBodu));            
         }
-        propertySupport.firePropertyChange("progressMessage", null, "loops detection");
         System.gc();
 //        System.out.println("Distances:");
 //        DecimalFormat format = new DecimalFormat("#####");
@@ -172,11 +171,13 @@ public class PLTdata {
     }
     
     public void calculateStats() {
+//        propertySupport.firePropertyChange("progressMessage", null, "loops detection and lengths calculation");
         double thisTravel;
         pocetPrejezdu = 0;
         delkaPrejezdu = 0;
         delkaCar = 0;
         for (int k=0; k < pocetCar; k++) {
+//            propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*k)/pocetCar));            
             delkaCar += Math.sqrt(Math.pow(point_x[lines_2[k]] - point_x[lines_1[k]], 2) + Math.pow(point_y[lines_2[k]] - point_y[lines_1[k]], 2));
             status[k] = checkStatus(k);
 //            System.out.println("status of " + k + " = "+status[k]+"; lines at point 1 = "+lines_at_point[lines_1[k]]+"; lines at point 2 = "+lines_at_point[lines_2[k]]+"; pen = " +pens[k]);
@@ -188,6 +189,7 @@ public class PLTdata {
                 }
             }
         }
+//        propertySupport.firePropertyChange("progressFinished", false, true);
     }
 
     public void setLineCount(int lineCount) {
