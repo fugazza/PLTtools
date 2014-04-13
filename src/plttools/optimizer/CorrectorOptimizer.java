@@ -210,21 +210,25 @@ public class CorrectorOptimizer extends AbstractOptimizer {
                             nextY = (int) midPoints[lastPoint].getY();
                             pointUsed[lastPoint] = true;
                             // add the line to optimized set of lines - but only if it is long enough and
-                            if ((lastX >= 0)
-                                    && (minDistance > 0.025 || (!haveFirstPoint && minDistance != 0))
+                            if (haveFirstPoint
+                                    && (minDistance > 0.025)
                                     && !(lastX==nextX && lastY==nextY)) { // && pd.isPointInLine(intersectPoints[lastPoint], i)
 //                                System.out.println("line #"+i +": added duplicate line #" + j + " between ["+lastX+";"+lastY+"] and ["+nextX+";"+nextY+"]");
                                 p.addLine(  lastX - offsetX,
                                             lastY - offsetY, 
                                             nextX - offsetX,
                                             nextY - offsetY); 
-                                haveFirstPoint = true;
+                                // and prepare variables for next run of finding next point on intersected line
+                                lastX = nextX;
+                                lastY = nextY;
+                                lastIntersecX = (int) intersectPoints[lastPoint].getX();
+                                lastIntersecY = (int) intersectPoints[lastPoint].getY();       
                             }
-                            // and prepare variables for next run of finding next point on intersected line
-                            lastX = nextX;
-                            lastY = nextY;
-                            lastIntersecX = (int) intersectPoints[lastPoint].getX();
-                            lastIntersecY = (int) intersectPoints[lastPoint].getY();       
+                            if (!haveFirstPoint) {
+                                haveFirstPoint = true;
+                                lastX = nextX;
+                                lastY = nextY;
+                            }
                         } else {
                             // break the loop if we reached the end of line ... meaning we have no line to add
                             break;
