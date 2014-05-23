@@ -69,11 +69,13 @@ public class PLTfile {
         boolean penUp = true;
         int activePen = 0;
         boolean pensInPlot[] = new boolean[maxPens];
+        int iii = 0;
         
         System.out.println("parseRaw - start parsing");
         StringTokenizer st0 = new StringTokenizer(rawPLT.toString(),";");
         while (st0.hasMoreTokens()) {
             prikaz = st0.nextToken();
+            System.out.println("token i="+(iii++)+"; "+prikaz);
             if (prikaz.startsWith("PUPA") || (penUp && prikaz.startsWith("PA"))) {
                 int commandLength = (prikaz.startsWith("PUPA")) ? 4 : 2;
                 StringTokenizer st2 = new StringTokenizer(prikaz.substring(commandLength),",");
@@ -98,9 +100,14 @@ public class PLTfile {
                 penUp = false;
             } else if (prikaz.startsWith("SP")) {
                 if (prikaz.length() > 2) {
-                    activePen = Byte.parseByte(prikaz.substring(2));
+                    try {
+                        activePen = Byte.parseByte(prikaz.substring(2));
+                    } catch (NumberFormatException e) {
+                        JOptionPane.showMessageDialog(null, "Zdrojový soubor obsahuje chybu v příkazu SP", "Chyba určení pera", JOptionPane.ERROR_MESSAGE);
+                        activePen = 1;
+                    }
                 } else {
-                    activePen = 0;
+                    activePen = 1;
                 }
                 if (!pensInPlot[activePen]) {
                     pensInPlot[activePen] = true;
@@ -176,7 +183,12 @@ public class PLTfile {
                 penUp = false;
             } else if (prikaz.startsWith("SP")) {
                 if (prikaz.length() > 2) {
-                    activePen = Byte.parseByte(prikaz.substring(2));
+                    try {
+                        activePen = Byte.parseByte(prikaz.substring(2));
+                    } catch (NumberFormatException e) {
+                        JOptionPane.showMessageDialog(null, "Zdrojový soubor obsahuje chybu v příkazu SP", "Chyba určení pera", JOptionPane.ERROR_MESSAGE);
+                        activePen = 1;
+                    }
                 } else {
                     activePen = 0;
                 }
