@@ -467,4 +467,14 @@ public class PLTdata {
         
         return p;
     }
+    
+    public void deleteLine(int lineNum) {
+        for (int i=0; i<populatedLines-1; i++) {
+            if (lineNum<=i) {
+                lines_1[i] = lines_1[i+1];
+                lines_2[i] = lines_2[i+1];
+            }
+        }
+        populatedLines--;
+    }
 }

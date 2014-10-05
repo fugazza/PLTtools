@@ -4,9 +4,12 @@
  */
 package plttools.GUI;
 
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
@@ -39,6 +42,8 @@ public class PLTpanel extends JPanel {
     private int maxX;  // int plot units
     private int maxY;  // int plot units
     private Point dragPoint = new Point(0,0);
+    private int highlightedLine = -1;
+    private int highlightedPen = -1;
 
     public PLTpanel() {
         super();
@@ -60,6 +65,11 @@ public class PLTpanel extends JPanel {
             public void mousePressed(MouseEvent e) {
                 dragPoint.setLocation(e.getPoint());
             }
+            
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                requestFocusInWindow();
+            }
 
         });
         addMouseMotionListener(new MouseMotionAdapter() {
@@ -68,8 +78,35 @@ public class PLTpanel extends JPanel {
             public void mouseDragged(MouseEvent e) {
                 panelMouseDragged(e);
             }
+            
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                panelMouseMoved(e);
+            }
 
         });
+        
+        addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                //System.out.println("Key presse - code = " + e.getKeyCode() + "(code for del = "+KeyEvent.VK_DELETE+")");
+                if (e.getKeyCode() == KeyEvent.VK_DELETE) {
+                    if (plt != null && plt.getPltData() != null && highlightedLine != -1) {
+                        for (PLTdata p: plt.getPltData()) {
+                            if (p.getPen() == highlightedPen) {
+                                p.deleteLine(highlightedLine);
+                                highlightedLine = -1;
+                                highlightedPen = -1;
+                                repaint();
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        setFocusable(true);
         
         setTransferHandler( new TransferHandler() {
             @Override
@@ -154,8 +191,9 @@ public class PLTpanel extends JPanel {
             
     
     @Override
-    protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
+    protected void paintComponent(Graphics g_orig) {
+        super.paintComponent(g_orig);
+        Graphics2D g = (Graphics2D) g_orig;
         if (plt != null && plt.getPltData() != null) {
             // draw the background for area for output of plot
             g.setColor(Color.WHITE);
@@ -192,6 +230,12 @@ public class PLTpanel extends JPanel {
                         g.setColor(getColorForStatus(status[i]));
                     } else {
                         g.setColor(getColorForPen(p.getPen()));
+                    }
+                    
+                    if (i==highlightedLine && highlightedPen == p.getPen()) {
+                        g.setStroke(new BasicStroke(3));
+                    } else {
+                        g.setStroke(new BasicStroke(1));
                     }
                     g.drawLine(transformX(point_x[lines_1[i]]), transformY(point_y[lines_1[i]]),
                                transformX(point_x[lines_2[i]]), transformY(point_y[lines_2[i]]));   
@@ -352,5 +396,68 @@ public class PLTpanel extends JPanel {
         centerY += (e.getY() - dragPoint.y) / scale;
         dragPoint.setLocation(e.getPoint());
         repaint();
+    }
+
+    private void panelMouseMoved(MouseEvent e) {
+        if (plt != null && plt.getPltData() != null) {
+            highlightedLine = -1;
+            highlightedPen = -1;
+            boolean haveSelection = false;
+            final int distanceThreshold = 7; // 7 pixels
+            double distance = 0;
+            for (PLTdata p: plt.getPltData()) {
+                int lines_1[] = p.getLines_1();
+                int lines_2[] = p.getLines_2();
+                int point_x[] = p.getPoint_x();
+                int point_y[] = p.getPoint_y();
+                int pocet = p.getPopulatedLines();        
+
+                int p1x, p1y, p2x, p2y, mx, my;
+
+                for (int i = 0; i < pocet; i++) {
+                    p1x = transformX(point_x[lines_1[i]]);
+                    p1y = transformY(point_y[lines_1[i]]);
+                    p2x = transformX(point_x[lines_2[i]]);
+                    p2y = transformY(point_y[lines_2[i]]);
+
+                    // skip all lines that are not visible
+                    if ((p1x < 0 && p2x < 0)
+                        || (p1x > getWidth() && p2x > getWidth())
+                        || (p1y < 0 && p2y < 0)
+                        || (p1y > getHeight()) && p2y > getHeight()) {
+                        continue;
+                    }
+                    
+                    // skipt lines, in whose bounding box the mouse is not located
+                    Rectangle r = new Rectangle(new Point(p1x,p1y));
+                    r.add(p2x,p2y);
+                    r.grow(distanceThreshold,distanceThreshold);
+                    if (!r.contains(e.getPoint())) {
+                        continue;
+                    }
+
+                    // for visible lines calculate distance to mouse point
+                    mx = e.getX();
+                    my = e.getY();
+
+                    int a = p2y - p1y;
+                    int b = -(p2x - p1x);
+                    float c = -p1x*a - p1y*b;
+
+                    distance = (Math.abs(a*mx + b*my + c) / Math.sqrt(a*a + b*b));
+
+                    if (distance <= distanceThreshold) {
+                        haveSelection = true;
+                        highlightedLine = i;
+                        highlightedPen = p.getPen();
+                        break;
+                    }                 
+                }
+                if (haveSelection) {
+                    break;
+                }
+            }
+            repaint();
+        }
     }
 }
