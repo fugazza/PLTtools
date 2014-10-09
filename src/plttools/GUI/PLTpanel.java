@@ -37,6 +37,7 @@ public class PLTpanel extends JPanel {
     private boolean kreslitPrejezdy = true;
     private boolean kreslitStatus = false;
     private boolean drawDebug = false;
+    private boolean displayScale = true;
     private double centerX;  // int plot units
     private double centerY;  // int plot units
     private int maxX;  // int plot units
@@ -89,7 +90,7 @@ public class PLTpanel extends JPanel {
         addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
-                //System.out.println("Key presse - code = " + e.getKeyCode() + "(code for del = "+KeyEvent.VK_DELETE+")");
+//                System.out.println("Key presse - code = " + e.getKeyCode() + "(code for del = "+KeyEvent.VK_DELETE+")");
                 if (e.getKeyCode() == KeyEvent.VK_DELETE) {
                     if (plt != null && plt.getPltData() != null && highlightedLine != -1) {
                         for (PLTdata p: plt.getPltData()) {
@@ -102,6 +103,10 @@ public class PLTpanel extends JPanel {
                             }
                         }
                     }
+                } else if (e.getKeyCode() == KeyEvent.VK_ADD) {
+                    setNewScale(scale*1.2, getWidth()/2, getHeight()/2);
+                } else if (e.getKeyCode() == KeyEvent.VK_SUBTRACT) {
+                    setNewScale(scale*0.85, getWidth()/2, getHeight()/2);
                 }
             }
         });
@@ -276,6 +281,26 @@ public class PLTpanel extends JPanel {
                         g.drawString(Integer.toString(i), pX - infoW/2+2, pY - 5 - 2);
                     }
                 }
+                
+                if (displayScale) {
+                    double baseUnit = Math.pow(10, Math.floor(Math.log10(getWidth() / 2 / scale / 40.0)));
+                    int baseUnitInPixels = (int) (baseUnit*40*scale);
+                    int segmentsCount = (int) Math.min(Math.floor(getWidth() / baseUnitInPixels),10); 
+                    int barLength = (int) (segmentsCount * baseUnitInPixels); //(int) (getWidth() * baseUnit / scale);
+                    int barHeight = 15;
+//                    System.out.println("base unit = " + baseUnit + "; bar length = " + barLength + "; panel width = " + getWidth() + "; scale = " + scale);
+                    g.setColor(Color.WHITE);
+                    g.fillRect(5, 5, barLength, barHeight);
+                    g.setColor(Color.BLACK);
+                    g.drawRect(5, 5, barLength, barHeight);
+                    for (int i = 0; i<segmentsCount; i++) {
+                        if ((i % 2) == 0) {
+                            g.fillRect(5+i*baseUnitInPixels, 5, baseUnitInPixels, barHeight);
+                        }
+                        g.drawString(Double.toString(baseUnit * (i+1)), 5 + (i+1)*baseUnitInPixels, barHeight + 5 +2+15);                        
+                    }
+                }
+                
             }    
         }
     }
@@ -352,13 +377,17 @@ public class PLTpanel extends JPanel {
     }
     
     private void panelMouseWheelMoved(MouseWheelEvent e) {
+        setNewScale(scale *= (1 - e.getWheelRotation() * 0.1), e.getX(), e.getY());
+    }
+    
+    private void setNewScale(double newScale, int newCenterX, int newCenterY) {
         double origScale = scale;
         double origCenterX = transformX(centerX);
         double origCenterY = transformY(centerY);
-        scale *= (1 - e.getWheelRotation() * 0.1);
-        centerX -= ((e.getX() - origCenterX) *(origScale - scale) / (scale * origScale));
-        centerY += ((e.getY() - origCenterY) *(origScale - scale) / (scale * origScale));
-        repaint();
+        scale = newScale;
+        centerX -= ((newCenterX - origCenterX) *(origScale - scale) / (scale * origScale));
+        centerY += ((newCenterY - origCenterY) *(origScale - scale) / (scale * origScale));
+        repaint();        
     }
     
     private void panelMouseClicked(MouseEvent e) {
