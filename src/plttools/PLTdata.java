@@ -20,6 +20,7 @@ public class PLTdata {
     protected int point_y[];
     protected int lines_1[];
     protected int lines_2[];
+    protected int selectedLines[] = new int[0];
     protected byte pen;
     protected byte status[];
     protected int pocetCar;
@@ -477,4 +478,44 @@ public class PLTdata {
         }
         populatedLines--;
     }
-}
+    
+    public void setSelection(int lines[]) {
+        selectedLines = lines;
+    }
+    
+    public void addSelection(int lines[]) {
+        int newSel[] = new int[selectedLines.length + lines.length];
+        System.arraycopy(selectedLines, 0, newSel, 0, selectedLines.length);
+        System.arraycopy(lines, 0, newSel, selectedLines.length, lines.length);
+        selectedLines = newSel;
+    }
+    
+    public void deleteSelection(int lines[]) {
+        int newSel[] = new int[selectedLines.length - lines.length];
+        boolean contains;
+        int position = 0;
+        for (int i: selectedLines) {
+            contains = false;
+            for (int j: lines) {
+                if (i == j) {
+                    contains = true;
+                    break;
+                }
+            }
+            
+            if (! contains) {
+                newSel[position++] = i;
+            }
+        }
+        selectedLines = newSel;
+    }
+    
+    public boolean isInSelection(int lineNum) {
+        for (int i:selectedLines) {
+            if (i == lineNum) {
+                return true;
+            }
+        }
+        return false;
+    }
+} 

@@ -14,6 +14,7 @@ import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.*;
+import java.awt.geom.Rectangle2D;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -45,6 +46,10 @@ public class PLTpanel extends JPanel {
     private Point dragPoint = new Point(0,0);
     private int highlightedLine = -1;
     private int highlightedPen = -1;
+    private boolean panMode = true;
+    private boolean selectMode = false;
+    private Rectangle selectionRectangle = null;
+    private Point startSelectionPoint = null;
 
     public PLTpanel() {
         super();
@@ -64,7 +69,55 @@ public class PLTpanel extends JPanel {
 
             @Override
             public void mousePressed(MouseEvent e) {
-                dragPoint.setLocation(e.getPoint());
+                if (panMode) {
+                    dragPoint.setLocation(e.getPoint());
+                }
+                if (selectMode) {
+                    startSelectionPoint = e.getPoint();
+                }
+                
+            }
+            
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (selectionRectangle != null) {
+                    System.out.println("mouse button released");
+                    Rectangle.Double selectionInDataSpace = new Rectangle.Double(backTransformX(selectionRectangle.x), backTransformY(selectionRectangle.y), 0, 0);
+                    selectionInDataSpace.add(backTransformX(selectionRectangle.x + selectionRectangle.width),
+                                             backTransformY(selectionRectangle.y + selectionRectangle.height));
+                    
+                    System.out.println("selection rectangle = " + selectionInDataSpace);
+                    for (PLTdata p: plt.getPltData()) {
+                        int selCount = 0;
+                        int lines_1[] = p.getLines_1();
+                        int lines_2[] = p.getLines_2();
+                        int point_x[] = p.getPoint_x();
+                        int point_y[] = p.getPoint_y();
+                        int pocet = p.getPopulatedLines();  
+
+                        for (int i=0; i<pocet; i++) {
+                            if (selectionInDataSpace.contains(point_x[lines_1[i]], point_y[lines_1[i]]) &&
+                                selectionInDataSpace.contains(point_x[lines_2[i]], point_y[lines_2[i]])) {
+                                selCount++;
+                            }     
+                        }
+                        
+                        System.out.println("lines in selection counted = " + selCount);
+                        int selection[] = new int[selCount];
+                        int selPointer = 0;
+                        for (int i=0; i<pocet; i++) {
+                            if (selectionInDataSpace.contains(point_x[lines_1[i]], point_y[lines_1[i]]) &&
+                                selectionInDataSpace.contains(point_x[lines_2[i]], point_y[lines_2[i]])) {
+                                selection[selPointer++] = i; 
+                            }     
+                        } 
+                        System.out.println("Selection lines acquired");
+                        p.setSelection(selection);
+                        System.out.println("selection finished");
+                    }
+                }
+                selectionRectangle = null;
+                repaint();
             }
             
             @Override
@@ -224,6 +277,7 @@ public class PLTpanel extends JPanel {
                 for (int i = 0; i < pocet; i++) {
                     if (kreslitPrejezdy && (lines_1[i] != lastPoint)) {
                         g.setColor(getColorForPen(-1));
+                        g.setStroke(new BasicStroke(1));
                         g.drawLine(transformX(lastX), transformY(lastY),
                                    transformX(point_x[lines_1[i]]),transformY(point_y[lines_1[i]]));                    
     //                    if (i <= 5) {
@@ -231,17 +285,24 @@ public class PLTpanel extends JPanel {
     //                               +";x2="+transformX(x1[i])+";y2="+transformY(y1[i]));
     //                    }
                     }
-                    if (kreslitStatus) {
-                        g.setColor(getColorForStatus(status[i]));
+                    
+                    if (p.isInSelection(i)) {
+                        g.setColor(new Color(128,255,128));
+                        g.setStroke(new BasicStroke(3));
                     } else {
-                        g.setColor(getColorForPen(p.getPen()));
+                        if (kreslitStatus) {
+                            g.setColor(getColorForStatus(status[i]));
+                        } else {
+                            g.setColor(getColorForPen(p.getPen()));
+                        }
+
+                        g.setStroke(new BasicStroke(1));
                     }
                     
                     if (i==highlightedLine && highlightedPen == p.getPen()) {
                         g.setStroke(new BasicStroke(3));
-                    } else {
-                        g.setStroke(new BasicStroke(1));
                     }
+                                       
                     g.drawLine(transformX(point_x[lines_1[i]]), transformY(point_y[lines_1[i]]),
                                transformX(point_x[lines_2[i]]), transformY(point_y[lines_2[i]]));   
 
@@ -301,6 +362,13 @@ public class PLTpanel extends JPanel {
                     }
                 }
                 
+                if (selectionRectangle != null) {
+                    //System.out.println("drawing selection from [" + selectionRectangle.x + "," + selectionRectangle.y + "] with dimensions ["+ selectionRectangle.width + "," + selectionRectangle.height);
+                    g.setXORMode(new Color(64,32,0));
+                    g.fillRect(selectionRectangle.x, selectionRectangle.y, selectionRectangle.width, selectionRectangle.height);
+                    g.setPaintMode();
+                }
+                
             }    
         }
     }
@@ -309,8 +377,16 @@ public class PLTpanel extends JPanel {
         return (int) (getWidth()/2 + ((x-centerX) * scale));
     }
 
+    private double backTransformX(int x) {
+        return (double) ((x - getWidth()/2) / scale + centerX);
+    }
+    
     private int transformY(double y) {
         return (int) (getHeight()/2 - ((y-centerY) * scale));
+    }
+
+    private double backTransformY(int y) {
+        return (double) ((getHeight()/2 - y) / scale + centerY);
     }
 
     public static Color getColorForPen(int pen) {
@@ -421,10 +497,18 @@ public class PLTpanel extends JPanel {
     }
     
     private void panelMouseDragged(MouseEvent e) {
-        centerX -= (e.getX() - dragPoint.x) / scale;
-        centerY += (e.getY() - dragPoint.y) / scale;
-        dragPoint.setLocation(e.getPoint());
-        repaint();
+        if (panMode) {
+            centerX -= (e.getX() - dragPoint.x) / scale;
+            centerY += (e.getY() - dragPoint.y) / scale;
+            dragPoint.setLocation(e.getPoint());
+            repaint();
+        }
+        
+        if (selectMode) {
+            selectionRectangle = new Rectangle(startSelectionPoint);
+            selectionRectangle.add(e.getPoint());
+            repaint();
+        }
     }
 
     private void panelMouseMoved(MouseEvent e) {
@@ -489,4 +573,16 @@ public class PLTpanel extends JPanel {
             repaint();
         }
     }
+
+    public void setSelectMode() {
+        this.selectMode = true;
+        this.panMode = false;
+    }
+
+    public void setPanMode() {
+        this.panMode = true;
+        this.selectMode = false;
+    }
+    
+    
 }

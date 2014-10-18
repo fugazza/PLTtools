@@ -16,9 +16,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.BorderFactory;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import javax.swing.SwingWorker;
+import javax.swing.border.EmptyBorder;
 import javax.swing.filechooser.FileFilter;
 import plttools.GUI.PenObject;
 
@@ -75,11 +77,15 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
         jFileChooser1 = new javax.swing.JFileChooser();
         jSplitPane1 = new javax.swing.JSplitPane();
         jPanel1 = new javax.swing.JPanel();
-        loadButton = new javax.swing.JButton();
-        saveButton = new javax.swing.JButton();
         pLTpanel1 = new plttools.GUI.PLTpanel();
         jLabel1 = new javax.swing.JLabel();
         jProgressBar1 = new javax.swing.JProgressBar();
+        jToolBar1 = new javax.swing.JToolBar();
+        loadButton = new javax.swing.JButton();
+        saveButton = new javax.swing.JButton();
+        jSeparator1 = new javax.swing.JToolBar.Separator();
+        panModeButton = new javax.swing.JButton();
+        selectModeButton = new javax.swing.JButton();
         jPanel2 = new javax.swing.JPanel();
         jPanel3 = new javax.swing.JPanel();
         jCheckBox1 = new javax.swing.JCheckBox();
@@ -124,20 +130,6 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
         jSplitPane1.setResizeWeight(1.0);
         jSplitPane1.setOneTouchExpandable(true);
 
-        loadButton.setText("Load PLT file");
-        loadButton.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                loadButtonActionPerformed(evt);
-            }
-        });
-
-        saveButton.setText("Save *.PLT");
-        saveButton.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                saveButtonActionPerformed(evt);
-            }
-        });
-
         pLTpanel1.setBackground(new java.awt.Color(231, 231, 231));
 
         org.jdesktop.beansbinding.Binding binding = org.jdesktop.beansbinding.Bindings.createAutoBinding(org.jdesktop.beansbinding.AutoBinding.UpdateStrategy.READ_WRITE, jCheckBox3, org.jdesktop.beansbinding.ELProperty.create("${selected}"), pLTpanel1, org.jdesktop.beansbinding.BeanProperty.create("drawDebug"));
@@ -151,17 +143,60 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
         pLTpanel1.setLayout(pLTpanel1Layout);
         pLTpanel1Layout.setHorizontalGroup(
             pLTpanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 502, Short.MAX_VALUE)
+            .addGap(0, 782, Short.MAX_VALUE)
         );
         pLTpanel1Layout.setVerticalGroup(
             pLTpanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 493, Short.MAX_VALUE)
+            .addGap(0, 479, Short.MAX_VALUE)
         );
 
         jLabel1.setText("PLT info:");
 
         jProgressBar1.setString("Ready");
         jProgressBar1.setStringPainted(true);
+
+        jToolBar1.setRollover(true);
+
+        loadButton.setText("Load PLT file");
+        loadButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                loadButtonActionPerformed(evt);
+            }
+        });
+        jToolBar1.add(loadButton);
+
+        saveButton.setText("Save *.PLT");
+        saveButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                saveButtonActionPerformed(evt);
+            }
+        });
+        jToolBar1.add(saveButton);
+        jToolBar1.add(jSeparator1);
+
+        panModeButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/plttools/GUI/icons/panMode.png"))); // NOI18N
+        panModeButton.setToolTipText("Pan");
+        panModeButton.setFocusable(false);
+        panModeButton.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        panModeButton.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        panModeButton.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                panModeButtonMouseClicked(evt);
+            }
+        });
+        jToolBar1.add(panModeButton);
+
+        selectModeButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("/plttools/GUI/icons/selectMode.png"))); // NOI18N
+        selectModeButton.setToolTipText("Select");
+        selectModeButton.setFocusable(false);
+        selectModeButton.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        selectModeButton.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        selectModeButton.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                selectModeButtonMouseClicked(evt);
+            }
+        });
+        jToolBar1.add(selectModeButton);
 
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
@@ -170,26 +205,21 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(pLTpanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addComponent(loadButton)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(saveButton))
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addComponent(jLabel1, javax.swing.GroupLayout.DEFAULT_SIZE, 423, Short.MAX_VALUE)
+                        .addComponent(jLabel1, javax.swing.GroupLayout.DEFAULT_SIZE, 691, Short.MAX_VALUE)
                         .addGap(91, 91, 91))
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                            .addComponent(pLTpanel1, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(jProgressBar1, javax.swing.GroupLayout.DEFAULT_SIZE, 502, Short.MAX_VALUE))
+                            .addComponent(jToolBar1, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 770, Short.MAX_VALUE)
+                            .addComponent(jProgressBar1, javax.swing.GroupLayout.DEFAULT_SIZE, 770, Short.MAX_VALUE))
                         .addContainerGap())))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(loadButton)
-                    .addComponent(saveButton))
+                .addComponent(jToolBar1, javax.swing.GroupLayout.PREFERRED_SIZE, 47, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(pLTpanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -220,7 +250,7 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
                 .addComponent(jCheckBox2)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jCheckBox3)
-                .addContainerGap(144, Short.MAX_VALUE))
+                .addContainerGap(80, Short.MAX_VALUE))
         );
         jPanel3Layout.setVerticalGroup(
             jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -248,14 +278,14 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
             .addGroup(jPanel4Layout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(jLabel8)
-                .addContainerGap(156, Short.MAX_VALUE))
+                .addContainerGap(92, Short.MAX_VALUE))
         );
         jPanel4Layout.setVerticalGroup(
             jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel4Layout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(jLabel8)
-                .addContainerGap(234, Short.MAX_VALUE))
+                .addContainerGap(197, Short.MAX_VALUE))
         );
 
         jTabbedPane1.addTab("Greedy", jPanel4);
@@ -269,14 +299,14 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
             .addGroup(jPanel8Layout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(jLabel9)
-                .addContainerGap(76, Short.MAX_VALUE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         jPanel8Layout.setVerticalGroup(
             jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel8Layout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(jLabel9)
-                .addContainerGap(234, Short.MAX_VALUE))
+                .addContainerGap(197, Short.MAX_VALUE))
         );
 
         jTabbedPane1.addTab("Modified Greedy", jPanel8);
@@ -294,7 +324,7 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
                 .addComponent(jLabel2)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(antCountSpinner, javax.swing.GroupLayout.PREFERRED_SIZE, 65, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(265, Short.MAX_VALUE))
+                .addContainerGap(201, Short.MAX_VALUE))
         );
         jPanel5Layout.setVerticalGroup(
             jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -303,7 +333,7 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
                 .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel2)
                     .addComponent(antCountSpinner, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(223, Short.MAX_VALUE))
+                .addContainerGap(186, Short.MAX_VALUE))
         );
 
         jTabbedPane1.addTab("Ant Colony", jPanel5);
@@ -456,12 +486,12 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
             .addGroup(jPanel7Layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(optimizeButton, javax.swing.GroupLayout.DEFAULT_SIZE, 429, Short.MAX_VALUE)
-                    .addComponent(alghoritmComboBox, 0, 429, Short.MAX_VALUE)
+                    .addComponent(optimizeButton, javax.swing.GroupLayout.DEFAULT_SIZE, 365, Short.MAX_VALUE)
+                    .addComponent(alghoritmComboBox, 0, 365, Short.MAX_VALUE)
                     .addGroup(jPanel7Layout.createSequentialGroup()
                         .addComponent(jLabel10)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jComboBox1, 0, 232, Short.MAX_VALUE)))
+                        .addComponent(jComboBox1, 0, 168, Short.MAX_VALUE)))
                 .addContainerGap())
         );
         jPanel7Layout.setVerticalGroup(
@@ -473,7 +503,7 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
                     .addComponent(jLabel10)
                     .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(18, 18, 18)
-                .addComponent(optimizeButton, javax.swing.GroupLayout.DEFAULT_SIZE, 52, Short.MAX_VALUE)
+                .addComponent(optimizeButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addContainerGap())
         );
 
@@ -484,7 +514,7 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
             .addGroup(jPanel2Layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jTabbedPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 465, Short.MAX_VALUE)
+                    .addComponent(jTabbedPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 401, Short.MAX_VALUE)
                     .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(jPanel7, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap())
@@ -498,7 +528,7 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
                 .addComponent(jTabbedPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 327, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jPanel7, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(20, Short.MAX_VALUE))
+                .addContainerGap(39, Short.MAX_VALUE))
         );
 
         jSplitPane1.setRightComponent(jPanel2);
@@ -507,7 +537,7 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jSplitPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 1030, Short.MAX_VALUE)
+            .addComponent(jSplitPane1)
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -627,6 +657,18 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
             alghoritmComboBox.setSelectedIndex(jTabbedPane1.getSelectedIndex());
         }
     }//GEN-LAST:event_jTabbedPane1StateChanged
+
+    private void panModeButtonMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_panModeButtonMouseClicked
+        pLTpanel1.setPanMode();
+        panModeButton.setBorder(BorderFactory.createLoweredBevelBorder());
+        selectModeButton.setBorder(BorderFactory.createRaisedBevelBorder());
+    }//GEN-LAST:event_panModeButtonMouseClicked
+
+    private void selectModeButtonMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_selectModeButtonMouseClicked
+        pLTpanel1.setSelectMode();
+        selectModeButton.setBorder(BorderFactory.createLoweredBevelBorder());
+        panModeButton.setBorder(BorderFactory.createRaisedBevelBorder());
+    }//GEN-LAST:event_selectModeButtonMouseClicked
 
     @Override
     public void propertyChange(PropertyChangeEvent evt) {
@@ -750,8 +792,10 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
     private javax.swing.JPanel jPanel7;
     private javax.swing.JPanel jPanel8;
     private javax.swing.JProgressBar jProgressBar1;
+    private javax.swing.JToolBar.Separator jSeparator1;
     private javax.swing.JSplitPane jSplitPane1;
     private javax.swing.JTabbedPane jTabbedPane1;
+    private javax.swing.JToolBar jToolBar1;
     private javax.swing.JButton loadButton;
     private javax.swing.JCheckBox mergeIdenticCheckBox;
     private javax.swing.JCheckBox moveToOriginCheckBox;
@@ -759,7 +803,9 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
     private javax.swing.JSpinner offsetYSpinner;
     private javax.swing.JButton optimizeButton;
     private plttools.GUI.PLTpanel pLTpanel1;
+    private javax.swing.JButton panModeButton;
     private javax.swing.JButton saveButton;
+    private javax.swing.JButton selectModeButton;
     private javax.swing.JTextField thresholdTextField;
     private org.jdesktop.beansbinding.BindingGroup bindingGroup;
     // End of variables declaration//GEN-END:variables
