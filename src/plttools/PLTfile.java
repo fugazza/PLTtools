@@ -63,7 +63,7 @@ public class PLTfile {
     private void parseRaw() {
         String prikaz;
         // count number of lines, points and pens
-        int maxPens = 7;
+        int maxPens = 10;
         int countTravels[] = new int[maxPens];
         int countLines[] = new int[maxPens];
         boolean penUp = true;
@@ -74,11 +74,11 @@ public class PLTfile {
         System.out.println("parseRaw - start parsing");
         StringTokenizer st0 = new StringTokenizer(rawPLT.toString(),";");
         while (st0.hasMoreTokens()) {
-            prikaz = st0.nextToken();
+            prikaz = st0.nextToken().trim();
             System.out.println("token i="+(iii++)+"; "+prikaz);
             if (prikaz.startsWith("PUPA") || (penUp && prikaz.startsWith("PA"))) {
                 int commandLength = (prikaz.startsWith("PUPA")) ? 4 : 2;
-                StringTokenizer st2 = new StringTokenizer(prikaz.substring(commandLength),",");
+                StringTokenizer st2 = new StringTokenizer(prikaz.substring(commandLength).trim(),",");
                 while (st2.hasMoreTokens()) {
                     st2.nextToken();
                     st2.nextToken();
@@ -89,7 +89,7 @@ public class PLTfile {
                 penUp = true;
             } else if (prikaz.startsWith("PDPA") || (!penUp && prikaz.startsWith("PA"))) {
                 int commandLength = (prikaz.startsWith("PDPA")) ? 4 : 2;
-                StringTokenizer st2 = new StringTokenizer(prikaz.substring(commandLength),",");                        
+                StringTokenizer st2 = new StringTokenizer(prikaz.substring(commandLength).trim(),",");                        
                 while (st2.hasMoreTokens()) {
                     st2.nextToken();
                     st2.nextToken();
@@ -101,7 +101,7 @@ public class PLTfile {
             } else if (prikaz.startsWith("SP")) {
                 if (prikaz.length() > 2) {
                     try {
-                        activePen = Byte.parseByte(prikaz.substring(2));
+                        activePen = Byte.parseByte(prikaz.substring(2).trim());
                     } catch (NumberFormatException e) {
                         JOptionPane.showMessageDialog(null, "Zdrojový soubor obsahuje chybu v příkazu SP", "Chyba určení pera", JOptionPane.ERROR_MESSAGE);
                         activePen = 1;
@@ -150,16 +150,19 @@ public class PLTfile {
         StringTokenizer st = new StringTokenizer(rawPLT.toString(),";");
         System.out.println("parseRaw - tokenizer started");
         while (st.hasMoreTokens()) {
-            prikaz = st.nextToken();
+            prikaz = st.nextToken().trim();
 //            System.out.println("prikaz: " +prikaz);
+//            System.out.println("parseRaw - "+i+" tokens read");
+//            i++;
 
             if (prikaz.startsWith("PUPA") || (penUp && prikaz.startsWith("PA"))) {
                 int commandLength = (prikaz.startsWith("PUPA")) ? 4 : 2;
-                StringTokenizer st2 = new StringTokenizer(prikaz.substring(commandLength),",");
+                System.out.println("PA substr = " + prikaz.substring(commandLength).trim());
+                StringTokenizer st2 = new StringTokenizer(prikaz.substring(commandLength).trim(),",");
                 while (st2.hasMoreTokens()) {
                     x2a = Integer.parseInt(st2.nextToken());
                     y2a = Integer.parseInt(st2.nextToken());
-                    
+//                    System.out.println("[x,y] = " + x2a + ","+y2a);
                     lastX = x2a;
                     lastY = y2a;
                 }
@@ -168,15 +171,13 @@ public class PLTfile {
                 penUp = true;
             } else if (prikaz.startsWith("PDPA") || (!penUp && prikaz.startsWith("PA"))) {
                 int commandLength = (prikaz.startsWith("PDPA")) ? 4 : 2;
-                StringTokenizer st2 = new StringTokenizer(prikaz.substring(commandLength),",");                        
+                StringTokenizer st2 = new StringTokenizer(prikaz.substring(commandLength).trim(),",");                        
                 while (st2.hasMoreTokens()) {
                     x2a = Integer.parseInt(st2.nextToken());
                     y2a = Integer.parseInt(st2.nextToken());
                     pltData[penToIndex[activePen]].addLine(lastX, lastY, x2a, y2a);
                     lastX = x2a;
                     lastY = y2a;
-                    i++;
-//                    System.out.println("parseRaw - "+i+" tokens from "+ pocetCar +" read");
                 }
                 penUp = false;
             } else if (prikaz.equals("PD")) {
@@ -184,7 +185,7 @@ public class PLTfile {
             } else if (prikaz.startsWith("SP")) {
                 if (prikaz.length() > 2) {
                     try {
-                        activePen = Byte.parseByte(prikaz.substring(2));
+                        activePen = Byte.parseByte(prikaz.substring(2).trim());
                     } catch (NumberFormatException e) {
                         JOptionPane.showMessageDialog(null, "Zdrojový soubor obsahuje chybu v příkazu SP", "Chyba určení pera", JOptionPane.ERROR_MESSAGE);
                         activePen = 1;
