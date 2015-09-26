@@ -28,7 +28,7 @@ public class GreedyOptimizer extends AbstractOptimizer {
         int i, j;
         p.setLineCount(pd.getPopulatedLines());
         int numEvaluatedPoints = 2*pd.getPopulatedLines();
-        int pocetBodu = pd.getPocetBodu();
+        int pocetBodu = pd.getPointsCount();
         byte passThroughPointLeft[] = new byte[pocetBodu];
         for (i=0; i<pocetBodu; i++) {
             passThroughPointLeft[i] = pd.getLinesAtPoint(i);
@@ -39,7 +39,7 @@ public class GreedyOptimizer extends AbstractOptimizer {
         minDist = (pd.getBoundingBox().getMaxX()+pd.getBoundingBox().getMaxY());
         System.out.println("searching first point for pen " + pd.getPen() + "; minDist = " + minDist);
         double dist;
-        for(i = 0; i<pd.getPocetBodu(); i++) {
+        for(i = 0; i<pd.getPointsCount(); i++) {
             dist = Math.sqrt(Math.pow(pd.getPoint_x()[i],2) + Math.pow(pd.getPoint_y()[i],2));
             if (dist < minDist && (pd.getStatusAtPoint(i) == 1 || pd.getStatusAtPoint(i) == 3)) {
                 lastPoint = i;
@@ -54,7 +54,7 @@ public class GreedyOptimizer extends AbstractOptimizer {
             propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*numPointsProcessed)/numEvaluatedPoints));                            
             System.out.println("last point: "+lastPoint+"["+pd.getPoint_x()[lastPoint]+","+pd.getPoint_y()[lastPoint]+"]");
             minDist = 2*(pd.getBoundingBox().getWidth()+pd.getBoundingBox().getHeight());
-            for(i=0; i<pd.getPocetBodu(); i++) {
+            for(i=0; i<pd.getPointsCount(); i++) {
                 if ((i != preLastPoint) && (passThroughPointLeft[i]>0) && (pd.isLineBetween(lastPoint, i) || pd.getDistance(lastPoint,i)<minDist)) {
                     minPoint = i;
                     minDist = pd.getDistance(lastPoint,minPoint);
@@ -91,7 +91,7 @@ public class GreedyOptimizer extends AbstractOptimizer {
             lastPoint = minPoint;
         }
         System.out.println("total lines = "+pd.getPopulatedLines() + "; num of processed lines = "+numLinesProcessed+ "; num of processed points = "+numPointsProcessed);
-        p.calculatePathLengths();
+        p.calculateStats();
         propertySupport.firePropertyChange("progressFinished", false, true);
         return p;
     }

@@ -27,8 +27,8 @@ public class AntColonyOptimizer extends AbstractOptimizer {
 //        System.out.println("distances calculated");
         int numProcessed;
         double maxAttractivity;
-        int pocetBodu = pd.getPocetBodu();
-        int antPath[] = new int[2*pd.getPocetCar()];
+        int pocetBodu = pd.getPointsCount();
+        int antPath[] = new int[2*pd.getLinesCount()];
         double antPathLength;
         float attractivity[][] = new float[pocetBodu][pocetBodu];
         System.out.println("attractivity array allocated");
@@ -44,7 +44,7 @@ public class AntColonyOptimizer extends AbstractOptimizer {
         float attract;
         int i, j, k;
         int lastPoint;
-        int numEvaluatedPoints = 2*pd.getPocetCar();
+        int numEvaluatedPoints = 2*pd.getLinesCount();
         int antsCount = settings.getAntCount();
         for (k=0; k<antsCount; k++) {
             propertySupport.firePropertyChange("progressMessage", null, "Ant "+(k+1)+" from "+(antsCount)+"is running");
@@ -123,7 +123,7 @@ public class AntColonyOptimizer extends AbstractOptimizer {
                     pheromones[j][i] = pheromone;
                 }
             }
-            double pheromoneUnit = (pd.getDelkaPrejezdu() / antPathLength )-1;
+            double pheromoneUnit = (pd.getTravelsLength() / antPathLength )-1;
             System.out.println("pheromone increase = " + pheromoneUnit);
             int r,s;
             propertySupport.firePropertyChange("progressMessage", null, "Ant "+(k+1)+" from "+(antsCount)+" deposing pheromones");
@@ -137,14 +137,14 @@ public class AntColonyOptimizer extends AbstractOptimizer {
             }
         }
         propertySupport.firePropertyChange("progressMessage", null, "Generating final path.");
-        p.setLineCount(pd.getPocetCar());
-        Boolean linesFound[] = new Boolean[pd.getPocetCar()];
-        for (i=0; i<pd.getPocetCar(); i++) {
+        p.setLineCount(pd.getLinesCount());
+        Boolean linesFound[] = new Boolean[pd.getLinesCount()];
+        for (i=0; i<pd.getLinesCount(); i++) {
             linesFound[i] = false;
         }
         int l1, l2, x1, y1, x2, y2;
         for (i=1; i<numEvaluatedPoints; i++) {
-            for(j=0; j<pd.getPocetCar(); j++) {
+            for(j=0; j<pd.getLinesCount(); j++) {
                 l1 = pd.getLines_1()[j];
                 l2 = pd.getLines_2()[j];
                 x1 = pd.getPoint_x()[l1];
@@ -166,7 +166,7 @@ public class AntColonyOptimizer extends AbstractOptimizer {
             propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*i)/pocetBodu));                            
         }
         
-        for (i=0; i<pd.getPocetCar(); i++) {
+        for (i=0; i<pd.getLinesCount(); i++) {
             if (!linesFound[i]) {
                 l1 = pd.getLines_1()[i];
                 l2 = pd.getLines_2()[i];
@@ -177,7 +177,7 @@ public class AntColonyOptimizer extends AbstractOptimizer {
                 //System.out.println("line " + i + " not found; between points ["+x1 + ";"+y1+"],["+x2 + ";"+y2+"]");
             }
         }
-        p.calculatePathLengths();
+        p.calculateStats();
 //        System.out.println("original lines count = " + pd.getPopulatedLines() + "; optimized lines count = " +p.getPopulatedLines() );
 //        System.out.println("original points count = " + pd.getPocetBodu() + "; optimized points count = " +p.getPocetBodu() );
         return p;

@@ -550,7 +550,9 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
     }// </editor-fold>//GEN-END:initComponents
 
     private void loadButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_loadButtonActionPerformed
-        jFileChooser1.setCurrentDirectory(pltFile.getFile());
+        File d = new File("/data/inova/PLTtools/testovaci_stitky");
+        jFileChooser1.setCurrentDirectory(d);
+//        jFileChooser1.setCurrentDirectory(pltFile.getFile());
         int result = jFileChooser1.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
             readFromFile(jFileChooser1.getSelectedFile());

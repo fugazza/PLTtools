@@ -95,7 +95,7 @@ public class ModifiedGreedyOptimizer extends AbstractOptimizer {
             }
         }
         
-        p.calculatePathLengths();
+        p.calculateStats();
         propertySupport.firePropertyChange("progressFinished", false, true);
         return p;
     }

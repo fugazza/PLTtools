@@ -256,10 +256,10 @@ public class CorrectorOptimizer extends AbstractOptimizer {
 
             // connect all ENDpoints that are closer to each other than threshold
             propertySupport.firePropertyChange("progressMessage", null, "connecting close endpoints");
-            for(i=0; i<p.getPocetBodu(); i++) {
-                propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*i)/p.getPocetBodu()));                            
+            for(i=0; i<p.getPointsCount(); i++) {
+                propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*i)/p.getPointsCount()));                            
 //                System.out.println("Status of point #" + i + " = " + p.getStatusAtPoint(i));
-                for(j=i+1; j<p.getPocetBodu(); j++) {
+                for(j=i+1; j<p.getPointsCount(); j++) {
                     if((p.getDistance(i, j) < threshold) 
                             && !p.isLineBetween(i, j)
                             && p.isEndPoint(i)

@@ -156,6 +156,16 @@ public class PLTpanel extends JPanel {
                             }
                         }
                     }
+                } else if (e.getKeyCode() == KeyEvent.VK_S) {
+                    if (plt != null && plt.getPltData() != null) {
+                        for (PLTdata p: plt.getPltData()) {
+                            if (p.hasSelection()) {
+                                p.makeSubPlotFromSelection();
+                                break;
+                            }
+                        }
+                        repaint();
+                   }
                 } else if (e.getKeyCode() == KeyEvent.VK_ADD) {
                     setNewScale(scale*1.2, getWidth()/2, getHeight()/2);
                 } else if (e.getKeyCode() == KeyEvent.VK_SUBTRACT) {
@@ -246,7 +256,108 @@ public class PLTpanel extends JPanel {
         }
         );
     }
-            
+    
+    private void paintPlot(Graphics2D g, PLTdata p) {
+        int lines_1[] = p.getLines_1();
+        int lines_2[] = p.getLines_2();
+        int lineType[] = p.getLineType();
+        int point_x[] = p.getPoint_x();
+        int point_y[] = p.getPoint_y();
+        byte status[] = p.getStatus();
+        int pocet = p.getPopulatedLines();        
+
+        // dimension of info box for displaying numbers of lines and points
+        int infoW = 25, infoH = 15;
+
+        // draw all lines
+        int lastX = 0;
+        int lastY = 0;
+        int lastPoint = -1;
+        int midpointX;
+        int midpointY;
+        
+        PLTdata subPlots[] = p.getSubPlots();
+        for (PLTdata subPlot: subPlots) {
+            g.setColor(Color.cyan);
+            Rectangle bb = subPlot.getBoundingBox();
+            g.fillRect(transformX(bb.getX()),
+                       transformY(bb.getY() + bb.getHeight()),
+                       transformX(bb.getX() + bb.getWidth()) - transformX(bb.getX()),
+                       -transformY(bb.getY() + bb.getHeight()) + transformY(bb.getY()));
+            paintPlot(g, subPlot);
+        }              
+        
+        for (int i = 0; i < pocet; i++) {
+            if (kreslitPrejezdy && (lines_1[i] != lastPoint)) {
+                g.setColor(getColorForPen(-1));
+                g.setStroke(new BasicStroke(1));
+                g.drawLine(transformX(lastX), transformY(lastY),
+                           transformX(point_x[lines_1[i]]),transformY(point_y[lines_1[i]]));                    
+//                    if (i <= 5) {
+//                        System.out.println("ir="+i+"; x1="+transformX(x2[i-1])+";y1="+transformY(y2[i-1])
+//                               +";x2="+transformX(x1[i])+";y2="+transformY(y1[i]));
+//                    }
+            }
+
+            if (p.isInSelection(i)) {
+                g.setColor(new Color(128,255,128));
+                g.setStroke(new BasicStroke(3));
+            } else {
+                if (kreslitStatus) {
+                    g.setColor(getColorForStatus(status[i]));
+                } else {
+                    g.setColor(getColorForPen(p.getPen()));
+                }
+
+                g.setStroke(new BasicStroke(1));
+            }
+
+            if (i==highlightedLine && highlightedPen == p.getPen()) {
+                g.setStroke(new BasicStroke(3));
+            }
+
+            if (lineType[i] < 10) {
+                g.drawLine(transformX(point_x[lines_1[i]]), transformY(point_y[lines_1[i]]),
+                           transformX(point_x[lines_2[i]]), transformY(point_y[lines_2[i]])); 
+            }
+
+            if (drawDebug) {
+                midpointX = transformX((point_x[lines_1[i]] + point_x[lines_2[i]])/2);
+                midpointY = transformY((point_y[lines_1[i]] + point_y[lines_2[i]])/2);
+                g.setColor(Color.WHITE);
+                g.fillRect(midpointX - infoW/2, midpointY - infoH/2, infoW, infoH);
+                g.setColor(Color.BLACK);
+                g.drawRect(midpointX - infoW/2, midpointY - infoH/2, infoW, infoH);
+                g.drawString(Integer.toString(i), midpointX - infoW/2+2, midpointY + infoH/2-2);
+            }
+            lastX = point_x[lines_2[i]];
+            lastY = point_y[lines_2[i]];
+            lastPoint = lines_2[i];
+//                if (i <= 5) {
+//                    System.out.println("i="+i+"; x1="+transformX(x1[i])+";y1="+transformY(y1[i])
+//                           +";x2="+transformX(x2[i])+";y2="+transformY(y2[i]));
+//                }
+        }
+
+        // draw marks at points if debug info selected
+        if(drawDebug) {
+            int pX, pY;
+            for (int i=0; i< p.getPointsCount(); i++) {
+                pX = transformX(p.getPoint_x()[i]);
+                pY = transformY(p.getPoint_y()[i]);
+                // fill the area for label
+                g.setColor(Color.WHITE);
+                g.fillRect(pX - infoW/2, pY - infoH - 5, infoW, infoH);
+                // draw border of label
+                g.setColor(Color.BLUE);
+                g.drawRect(pX - infoW/2, pY - infoH - 5, infoW, infoH);
+                // draw connecting line
+                g.drawLine(pX, pY, pX, pY-5);
+                // and outpt the text
+                g.drawString(Integer.toString(i), pX - infoW/2+2, pY - 5 - 2);
+            }
+        }
+    }
     
     @Override
     protected void paintComponent(Graphics g_orig) {
@@ -258,118 +369,34 @@ public class PLTpanel extends JPanel {
             g.fillRect(transformX(0), transformY(maxY), transformX(maxX) - transformX(0), transformY(0) - transformY(maxY));
 //            System.out.println("drawing; scale = " + scale + "maxX = " + plt.getBoundingBox().getMaxX());
             for (PLTdata p: plt.getPltData()) {
-                int lines_1[] = p.getLines_1();
-                int lines_2[] = p.getLines_2();
-                int point_x[] = p.getPoint_x();
-                int point_y[] = p.getPoint_y();
-                byte status[] = p.getStatus();
-                int pocet = p.getPopulatedLines();        
-
-                // dimension of info box for displaying numbers of lines and points
-                int infoW = 25, infoH = 15;
-
-                // draw all lines
-                int lastX = 0;
-                int lastY = 0;
-                int lastPoint = -1;
-                int midpointX;
-                int midpointY;
-                for (int i = 0; i < pocet; i++) {
-                    if (kreslitPrejezdy && (lines_1[i] != lastPoint)) {
-                        g.setColor(getColorForPen(-1));
-                        g.setStroke(new BasicStroke(1));
-                        g.drawLine(transformX(lastX), transformY(lastY),
-                                   transformX(point_x[lines_1[i]]),transformY(point_y[lines_1[i]]));                    
-    //                    if (i <= 5) {
-    //                        System.out.println("ir="+i+"; x1="+transformX(x2[i-1])+";y1="+transformY(y2[i-1])
-    //                               +";x2="+transformX(x1[i])+";y2="+transformY(y1[i]));
-    //                    }
-                    }
-                    
-                    if (p.isInSelection(i)) {
-                        g.setColor(new Color(128,255,128));
-                        g.setStroke(new BasicStroke(3));
-                    } else {
-                        if (kreslitStatus) {
-                            g.setColor(getColorForStatus(status[i]));
-                        } else {
-                            g.setColor(getColorForPen(p.getPen()));
-                        }
-
-                        g.setStroke(new BasicStroke(1));
-                    }
-                    
-                    if (i==highlightedLine && highlightedPen == p.getPen()) {
-                        g.setStroke(new BasicStroke(3));
-                    }
-                                       
-                    g.drawLine(transformX(point_x[lines_1[i]]), transformY(point_y[lines_1[i]]),
-                               transformX(point_x[lines_2[i]]), transformY(point_y[lines_2[i]]));   
-
-                    if (drawDebug) {
-                        midpointX = transformX((point_x[lines_1[i]] + point_x[lines_2[i]])/2);
-                        midpointY = transformY((point_y[lines_1[i]] + point_y[lines_2[i]])/2);
-                        g.setColor(Color.WHITE);
-                        g.fillRect(midpointX - infoW/2, midpointY - infoH/2, infoW, infoH);
-                        g.setColor(Color.BLACK);
-                        g.drawRect(midpointX - infoW/2, midpointY - infoH/2, infoW, infoH);
-                        g.drawString(Integer.toString(i), midpointX - infoW/2+2, midpointY + infoH/2-2);
-                    }
-                    lastX = point_x[lines_2[i]];
-                    lastY = point_y[lines_2[i]];
-                    lastPoint = lines_2[i];
-    //                if (i <= 5) {
-    //                    System.out.println("i="+i+"; x1="+transformX(x1[i])+";y1="+transformY(y1[i])
-    //                           +";x2="+transformX(x2[i])+";y2="+transformY(y2[i]));
-    //                }
-                }
-
-                // draw marks at points if debug info selected
-                if(drawDebug) {
-                    int pX, pY;
-                    for (int i=0; i< p.getPocetBodu(); i++) {
-                        pX = transformX(p.getPoint_x()[i]);
-                        pY = transformY(p.getPoint_y()[i]);
-                        // fill the area for label
-                        g.setColor(Color.WHITE);
-                        g.fillRect(pX - infoW/2, pY - infoH - 5, infoW, infoH);
-                        // draw border of label
-                        g.setColor(Color.BLUE);
-                        g.drawRect(pX - infoW/2, pY - infoH - 5, infoW, infoH);
-                        // draw connecting line
-                        g.drawLine(pX, pY, pX, pY-5);
-                        // and outpt the text
-                        g.drawString(Integer.toString(i), pX - infoW/2+2, pY - 5 - 2);
-                    }
-                }
-                
-                if (displayScale) {
-                    double baseUnit = Math.pow(10, Math.floor(Math.log10(getWidth() / 2 / scale / 40.0)));
-                    int baseUnitInPixels = (int) (baseUnit*40*scale);
-                    int segmentsCount = (int) Math.min(Math.floor(getWidth() / baseUnitInPixels),10); 
-                    int barLength = (int) (segmentsCount * baseUnitInPixels); //(int) (getWidth() * baseUnit / scale);
-                    int barHeight = 15;
+                paintPlot(g, p);
+            }
+               
+            if (displayScale) {
+                double baseUnit = Math.pow(10, Math.floor(Math.log10(getWidth() / 2 / scale / 40.0)));
+                int baseUnitInPixels = (int) (baseUnit*40*scale);
+                int segmentsCount = (int) Math.min(Math.floor(getWidth() / baseUnitInPixels),10); 
+                int barLength = (int) (segmentsCount * baseUnitInPixels); //(int) (getWidth() * baseUnit / scale);
+                int barHeight = 15;
 //                    System.out.println("base unit = " + baseUnit + "; bar length = " + barLength + "; panel width = " + getWidth() + "; scale = " + scale);
-                    g.setColor(Color.WHITE);
-                    g.fillRect(5, 5, barLength, barHeight);
-                    g.setColor(Color.BLACK);
-                    g.drawRect(5, 5, barLength, barHeight);
-                    for (int i = 0; i<segmentsCount; i++) {
-                        if ((i % 2) == 0) {
-                            g.fillRect(5+i*baseUnitInPixels, 5, baseUnitInPixels, barHeight);
-                        }
-                        g.drawString(Double.toString(baseUnit * (i+1)), 5 + (i+1)*baseUnitInPixels, barHeight + 5 +2+15);                        
+                g.setColor(Color.WHITE);
+                g.fillRect(5, 5, barLength, barHeight);
+                g.setColor(Color.BLACK);
+                g.drawRect(5, 5, barLength, barHeight);
+                for (int i = 0; i<segmentsCount; i++) {
+                    if ((i % 2) == 0) {
+                        g.fillRect(5+i*baseUnitInPixels, 5, baseUnitInPixels, barHeight);
                     }
+                    g.drawString(Double.toString(baseUnit * (i+1)), 5 + (i+1)*baseUnitInPixels, barHeight + 5 +2+15);                        
                 }
-                
-                if (selectionRectangle != null) {
-                    //System.out.println("drawing selection from [" + selectionRectangle.x + "," + selectionRectangle.y + "] with dimensions ["+ selectionRectangle.width + "," + selectionRectangle.height);
-                    g.setXORMode(new Color(64,32,0));
-                    g.fillRect(selectionRectangle.x, selectionRectangle.y, selectionRectangle.width, selectionRectangle.height);
-                    g.setPaintMode();
-                }
-                
-            }    
+            }
+
+            if (selectionRectangle != null) {
+                //System.out.println("drawing selection from [" + selectionRectangle.x + "," + selectionRectangle.y + "] with dimensions ["+ selectionRectangle.width + "," + selectionRectangle.height);
+                g.setXORMode(new Color(64,32,0));
+                g.fillRect(selectionRectangle.x, selectionRectangle.y, selectionRectangle.width, selectionRectangle.height);
+                g.setPaintMode();
+            }                
         }
     }
 

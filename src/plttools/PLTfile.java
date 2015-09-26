@@ -70,136 +70,122 @@ public class PLTfile {
         int activePen = 0;
         boolean pensInPlot[] = new boolean[maxPens];
         int iii = 0;
-        
-        System.out.println("parseRaw - start parsing");
-        StringTokenizer st0 = new StringTokenizer(rawPLT.toString(),";");
-        while (st0.hasMoreTokens()) {
-            prikaz = st0.nextToken().trim();
-            System.out.println("token i="+(iii++)+"; "+prikaz);
-            if (prikaz.startsWith("PUPA") || (penUp && prikaz.startsWith("PA"))) {
-                int commandLength = (prikaz.startsWith("PUPA")) ? 4 : 2;
-                StringTokenizer st2 = new StringTokenizer(prikaz.substring(commandLength).trim(),",");
-                while (st2.hasMoreTokens()) {
-                    st2.nextToken();
-                    st2.nextToken();
-                    countTravels[activePen]++;
-                }
-                penUp = true;
-            } else if (prikaz.equals("PU")) {
-                penUp = true;
-            } else if (prikaz.startsWith("PDPA") || (!penUp && prikaz.startsWith("PA"))) {
-                int commandLength = (prikaz.startsWith("PDPA")) ? 4 : 2;
-                StringTokenizer st2 = new StringTokenizer(prikaz.substring(commandLength).trim(),",");                        
-                while (st2.hasMoreTokens()) {
-                    st2.nextToken();
-                    st2.nextToken();
-                    countLines[activePen]++;
-                }
-                penUp = false;
-            } else if (prikaz.equals("PD")) {
-                penUp = false;
-            } else if (prikaz.startsWith("SP")) {
-                if (prikaz.length() > 2) {
-                    try {
-                        activePen = Byte.parseByte(prikaz.substring(2).trim());
-                    } catch (NumberFormatException e) {
-                        JOptionPane.showMessageDialog(null, "Zdrojový soubor obsahuje chybu v příkazu SP", "Chyba určení pera", JOptionPane.ERROR_MESSAGE);
-                        activePen = 1;
-                    }
-                } else {
-                    activePen = 1;
-                }
-                if (!pensInPlot[activePen]) {
-                    pensInPlot[activePen] = true;
-                }
-            }
-        }
-        
-        // recalculate count of pens and verify if they really contain any line
-        int countPens = 0;
-        for(int k=0; k<maxPens; k++) {
-            if (countLines[k] > 0) {
-                countPens++;                            
-            }
-        }
-        
-        // and since now acquire plot values from source file
-        pltData = new PLTdata[countPens];
-        optimizedPltData = new PLTdata[countPens];
-        int penToIndex[] = new int[maxPens];
-        // initialize plotData array
-        int l=0;
-        for(int k=0; k<maxPens; k++) {
-            System.out.println("parseRaw - " + countLines[k] + " lines for pen " + k);
-            if (pensInPlot[k] && countLines[k] > 0) {
-                pltData[l] = new PLTdata();
-                pltData[l].setLineCount(countLines[k]);
-                optimizedPltData[l] = new PLTdata();
-                penToIndex[k] = l;
-                l++;
-            }
-        }
-        
+        boolean firstRun = true;
         int x2a;
         int y2a;
-        int i = 0;
         int lastX = 0, lastY = 0;
-               
-        penUp = true;
-        System.out.println("parseRaw - before tokenizer");
-        StringTokenizer st = new StringTokenizer(rawPLT.toString(),";");
-        System.out.println("parseRaw - tokenizer started");
-        while (st.hasMoreTokens()) {
-            prikaz = st.nextToken().trim();
-//            System.out.println("prikaz: " +prikaz);
-//            System.out.println("parseRaw - "+i+" tokens read");
-//            i++;
-
-            if (prikaz.startsWith("PUPA") || (penUp && prikaz.startsWith("PA"))) {
-                int commandLength = (prikaz.startsWith("PUPA")) ? 4 : 2;
-                System.out.println("PA substr = " + prikaz.substring(commandLength).trim());
-                StringTokenizer st2 = new StringTokenizer(prikaz.substring(commandLength).trim(),",");
-                while (st2.hasMoreTokens()) {
-                    x2a = Integer.parseInt(st2.nextToken());
-                    y2a = Integer.parseInt(st2.nextToken());
-//                    System.out.println("[x,y] = " + x2a + ","+y2a);
-                    lastX = x2a;
-                    lastY = y2a;
-                }
-                penUp = true;
-            } else if (prikaz.equals("PU")) {
-                penUp = true;
-            } else if (prikaz.startsWith("PDPA") || (!penUp && prikaz.startsWith("PA"))) {
-                int commandLength = (prikaz.startsWith("PDPA")) ? 4 : 2;
-                StringTokenizer st2 = new StringTokenizer(prikaz.substring(commandLength).trim(),",");                        
-                while (st2.hasMoreTokens()) {
-                    x2a = Integer.parseInt(st2.nextToken());
-                    y2a = Integer.parseInt(st2.nextToken());
-                    pltData[penToIndex[activePen]].addLine(lastX, lastY, x2a, y2a);
-                    lastX = x2a;
-                    lastY = y2a;
-                }
-                penUp = false;
-            } else if (prikaz.equals("PD")) {
-                penUp = false;
-            } else if (prikaz.startsWith("SP")) {
-                if (prikaz.length() > 2) {
-                    try {
-                        activePen = Byte.parseByte(prikaz.substring(2).trim());
-                    } catch (NumberFormatException e) {
-                        JOptionPane.showMessageDialog(null, "Zdrojový soubor obsahuje chybu v příkazu SP", "Chyba určení pera", JOptionPane.ERROR_MESSAGE);
-                        activePen = 1;
+        int penToIndex[] = new int[1];
+        
+        System.out.println("parseRaw - start parsing");
+        for (int i = 0; i<=1; i++) {
+            String unknownCommands = "Attention! The file contains following unknown commands:\r\n";
+            firstRun = i==0;
+            System.out.println("parseRaw - before tokenizer, run #"+(i+1));
+            StringTokenizer st = new StringTokenizer(rawPLT.toString(),";");
+            System.out.println("parseRaw - tokenizer started");
+            while (st.hasMoreTokens()) {
+                prikaz = st.nextToken().trim();
+                System.out.println("token i="+(iii++)+"; "+prikaz);
+                if (prikaz.startsWith("PUPA") || (penUp && prikaz.startsWith("PA"))) {
+                    int commandLength = (prikaz.startsWith("PUPA")) ? 4 : 2;
+                    System.out.println("PA substr = " + prikaz.substring(commandLength).trim());
+                    StringTokenizer st2 = new StringTokenizer(prikaz.substring(commandLength).trim(),",");
+                    while (st2.hasMoreTokens()) {
+                        if (firstRun) {
+                            st2.nextToken();
+                            st2.nextToken();
+                            countTravels[activePen]++;
+                        } else {
+                            x2a = Integer.parseInt(st2.nextToken());
+                            y2a = Integer.parseInt(st2.nextToken());
+        //                    System.out.println("[x,y] = " + x2a + ","+y2a);
+                            lastX = x2a;
+                            lastY = y2a;                            
+                        }
+                    }
+                    penUp = true;
+                } else if (prikaz.equals("PU")) {
+                    penUp = true;
+                } else if (prikaz.startsWith("PDPA") || (!penUp && prikaz.startsWith("PA"))) {
+                    int commandLength = (prikaz.startsWith("PDPA")) ? 4 : 2;
+                    StringTokenizer st2 = new StringTokenizer(prikaz.substring(commandLength).trim(),",");                        
+                    while (st2.hasMoreTokens()) {
+                        if (firstRun) {
+                            st2.nextToken();
+                            st2.nextToken();
+                            countLines[activePen]++;
+                        } else {
+                            x2a = Integer.parseInt(st2.nextToken());
+                            y2a = Integer.parseInt(st2.nextToken());
+                            pltData[penToIndex[activePen]].addLine(lastX, lastY, x2a, y2a);
+                            lastX = x2a;
+                            lastY = y2a;                            
+                        }
+                    }
+                    penUp = false;
+                } else if (prikaz.equals("PD")) {
+                    penUp = false;
+                } else if (prikaz.startsWith("SP")) {
+                    if (prikaz.length() > 2) {
+                        try {
+                            activePen = Byte.parseByte(prikaz.substring(2).trim());
+                        } catch (NumberFormatException e) {
+                            JOptionPane.showMessageDialog(null, "Source file contains error in SP command", "Pen selection error", JOptionPane.ERROR_MESSAGE);
+                            activePen = 1;
+                        }
+                    } else {
+                        activePen = 0;
+                    }
+                    
+                    if (firstRun) {
+                        if (!pensInPlot[activePen]) {
+                            pensInPlot[activePen] = true;
+                        }
+                    } else {
+                        pltData[penToIndex[activePen]].setPen((byte) activePen);
                     }
                 } else {
-                    activePen = 0;
+                    unknownCommands += prikaz + "\r\n";
                 }
-                pltData[penToIndex[activePen]].setPen((byte) activePen);
             }
-        }
 
+            if (firstRun && unknownCommands.length()>58) {
+                JOptionPane.showMessageDialog(null, unknownCommands, "Unknown commands", JOptionPane.WARNING_MESSAGE);            
+            }
+            
+            if (!firstRun) {
+                break;
+            }
+
+            // recalculate count of pens and verify if they really contain any line
+            int countPens = 0;
+            for(int k=0; k<maxPens; k++) {
+                if (countLines[k] > 0) {
+                    countPens++;                            
+                }
+            }
+
+            // and since now acquire plot values from source file
+            pltData = new PLTdata[countPens];
+            optimizedPltData = new PLTdata[countPens];
+            penToIndex = new int[maxPens];
+            // initialize plotData array
+            int l=0;
+            for(int k=0; k<maxPens; k++) {
+                System.out.println("parseRaw - " + countLines[k] + " lines for pen " + k);
+                if (pensInPlot[k] && countLines[k] > 0) {
+                    pltData[l] = new PLTdata();
+                    pltData[l].setLineCount(countLines[k]);
+                    optimizedPltData[l] = new PLTdata();
+                    penToIndex[k] = l;
+                    l++;
+                }
+            }
+            // and now read the file once again and collect all data
+        }
+        
         for (PLTdata p: pltData) {
             p.addPropertyChangeListener(parent);
-            p.calculatePathLengths();
             p.calculateStats();            
         }
         System.out.println("before property fire");
@@ -295,7 +281,7 @@ public class PLTfile {
                 int lines_1[] = p.getLines_1();
                 int lines_2[] = p.getLines_2();
                 bw.write(";SP"+p.getPen());
-                for(int i=0; i<p.getPocetCar(); i++) {
+                for(int i=0; i<p.getLinesCount(); i++) {
                     if (point_x[lines_1[i]]!=lastX || point_y[lines_1[i]]!=lastY) {
                         bw.write(";PUPA"+point_x[lines_1[i]]+","+point_y[lines_1[i]]+";PDPA"+point_x[lines_2[i]]+","+point_y[lines_2[i]]);
                     } else {
@@ -361,7 +347,7 @@ public class PLTfile {
     public int getLinesLength() {
         int linesLength = 0;
         for (PLTdata p: pltData) {
-            linesLength += p.getDelkaCar();
+            linesLength += p.getLinesLength();
         }
         return linesLength;        
     }
@@ -369,7 +355,7 @@ public class PLTfile {
     public int getTravelsCount() {
         int travelsCount = 0;
         for (PLTdata p: pltData) {
-            travelsCount += p.getPocetPrejezdu();
+            travelsCount += p.getTravelsCount();
         }
         return travelsCount;        
     }
@@ -377,7 +363,7 @@ public class PLTfile {
     public int getTravelsLength() {
         int travelsLength = 0;
         for (PLTdata p: pltData) {
-            travelsLength += p.getDelkaPrejezdu();
+            travelsLength += p.getTravelsLength();
         }
         return travelsLength;        
     }
@@ -389,7 +375,7 @@ public class PLTfile {
     public long getRequiredMemory(int alghoritm) {
         int countPoints = 0;
         for (PLTdata p: pltData) {
-            countPoints += p.getPocetBodu();
+            countPoints += p.getPointsCount();
         }
         int countLines = getLinesCount();
         switch(alghoritm) {

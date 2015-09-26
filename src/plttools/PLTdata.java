@@ -4,6 +4,7 @@
  */
 package plttools;
 
+import com.sun.xml.internal.ws.message.saaj.SAAJHeader;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.beans.PropertyChangeListener;
@@ -20,36 +21,45 @@ public class PLTdata {
     protected int point_y[];
     protected int lines_1[];
     protected int lines_2[];
+    /**
+     * lineType -> 0 = straight line; 1 = circle; 2 = arc; 10.. = subplot, where [x-10] is index of subplot in 'subPlots' array
+     */
+    protected int lineType[];
     protected int selectedLines[] = new int[0];
     protected byte pen;
     protected byte status[];
-    protected int pocetCar;
+    protected int linesCount;
     private int populatedLines = 0;
 
     //calculated data
     protected float distances[][];
     protected int lines_at_point[];
-    private int pocetPrejezdu = 0;
-    protected int pocetBodu = 0;
-    private double delkaCar = 0.0;
-    private double delkaPrejezdu = 0.0;
+    private int travelsCount = 0;
+    protected int pointsCount = 0;
+    private double linesLength = 0.0;
+    private double travelsLength = 0.0;
     protected Rectangle boundingBox;
+    private PLTdata subPlots[] = new PLTdata[0];
+    private int subPlotsCount = 0;
 
     protected PropertyChangeSupport propertySupport = new PropertyChangeSupport(this);
     
     public void calculateDistances() {
         float dist;
-        distances = new float[pocetBodu][pocetBodu];
+        distances = new float[pointsCount][pointsCount];
         int i, j, k;
         propertySupport.firePropertyChange("progressMessage", null, "distance calculation");
-        for (i=0; i<pocetBodu; i++) {
+        for (i=0; i<pointsCount; i++) {
             distances[i][i] = (float) (2*(boundingBox.getMaxX()+boundingBox.getMaxY()));
             for (j=0; j<i; j++) {
                 dist = calculateDistance(i,j);
                 distances[i][j] = dist;
                 distances[j][i] = dist;
             }
-            propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*i)/pocetBodu));            
+            propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*i)/pointsCount));            
+        }
+        for (i=0; i<subPlotsCount; i++) {
+            subPlots[i].calculateDistances();
         }
         System.gc();
 //        System.out.println("Distances:");
@@ -77,15 +87,15 @@ public class PLTdata {
         int ka = startIndex;
         int numAt1;
         int numAt2;
-        boolean hledatDalsi = true;
+        boolean searchNext = true;
         if (lines_at_point[lines_1[startIndex]]<2) {
             return false;
         }
-        while (hledatDalsi) {
+        while (searchNext) {
             x2a = point_x[foundPoint];
             y2a = point_y[foundPoint];
-            hledatDalsi = false;
-            for (int i=0; i<pocetCar; i++) {
+            searchNext = false;
+            for (int i=0; i<linesCount; i++) {
                 if (i!=ka) {
                     if (point_x[lines_1[i]]==x2a && point_y[lines_1[i]]==y2a) {
                         numAt2 = lines_at_point[lines_2[i]];
@@ -94,7 +104,7 @@ public class PLTdata {
                         } else {
                             foundPoint = lines_2[i];
                             ka = i;
-                            hledatDalsi = true;
+                            searchNext = true;
                             break;
                         }
                     }
@@ -105,7 +115,7 @@ public class PLTdata {
                         } else {
                             foundPoint = lines_1[i];
                             ka = i;
-                            hledatDalsi = true;
+                            searchNext = true;
                             break;
                         }
                     }
@@ -151,42 +161,30 @@ public class PLTdata {
         }
         return 6;
     }
-
-    public void calculatePathLengths() {
-        int lastPoint = 0;
-        int lastX2 = 0;
-        int lastY2 = 0;
-        delkaCar = 0;
-        pocetPrejezdu = 0;
-        delkaPrejezdu = 0;
-        for (int i=0; i<pocetCar; i++) {
-            delkaCar += Math.sqrt(Math.pow(point_x[lines_2[i]] - point_x[lines_1[i]],2) + Math.pow(point_y[lines_2[i]]-point_y[lines_1[i]],2));
-            if (point_x[lines_1[i]] != point_x[lastPoint] || point_y[lines_1[i]] != point_y[lastPoint]) {
-                pocetPrejezdu++;
-                delkaPrejezdu += Math.sqrt(Math.pow(point_x[lines_1[i]]-lastX2,2) + Math.pow(point_y[lines_1[i]]-lastY2,2));
-            }
-            lastPoint = lines_2[i];
-            lastX2 = point_x[lastPoint];
-            lastY2 = point_y[lastPoint];
-        }        
-    }
     
     public void calculateStats() {
 //        propertySupport.firePropertyChange("progressMessage", null, "loops detection and lengths calculation");
         double thisTravel;
-        pocetPrejezdu = 0;
-        delkaPrejezdu = 0;
-        delkaCar = 0;
-        for (int k=0; k < pocetCar; k++) {
+        travelsCount = 0;
+        travelsLength = 0;
+        linesLength = 0;
+        for (int i=0; i < linesCount; i++) {
 //            propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*k)/pocetCar));            
-            delkaCar += Math.sqrt(Math.pow(point_x[lines_2[k]] - point_x[lines_1[k]], 2) + Math.pow(point_y[lines_2[k]] - point_y[lines_1[k]], 2));
-            status[k] = checkStatus(k);
-//            System.out.println("status of " + k + " = "+status[k]+"; lines at point 1 = "+lines_at_point[lines_1[k]]+"; lines at point 2 = "+lines_at_point[lines_2[k]]+"; pen = " +pens[k]);
-            if (k>1) {
-                thisTravel = Math.sqrt(Math.pow(point_x[lines_1[k]] - point_x[lines_2[k-1]], 2) + Math.pow(point_y[lines_1[k]] - point_y[lines_2[k-1]], 2));
-                if (thisTravel>0) {
-                    delkaPrejezdu += thisTravel;
-                    pocetPrejezdu++;
+            if (lineType[i] >= 10) { // subplot
+                subPlots[lineType[i]-10].calculateStats();
+                linesLength += subPlots[lineType[i]-10].linesLength;
+                travelsCount += subPlots[lineType[i]-10].travelsCount;
+                travelsLength += subPlots[lineType[i]-10].travelsLength;
+            } else {
+                linesLength += Math.sqrt(Math.pow(point_x[lines_2[i]] - point_x[lines_1[i]], 2) + Math.pow(point_y[lines_2[i]] - point_y[lines_1[i]], 2));
+                status[i] = checkStatus(i);
+    //            System.out.println("status of " + k + " = "+status[k]+"; lines at point 1 = "+lines_at_point[lines_1[k]]+"; lines at point 2 = "+lines_at_point[lines_2[k]]+"; pen = " +pens[k]);
+                if (i>1) {
+                    thisTravel = Math.sqrt(Math.pow(point_x[lines_1[i]] - point_x[lines_2[i-1]], 2) + Math.pow(point_y[lines_1[i]] - point_y[lines_2[i-1]], 2));
+                    if (thisTravel>0) {
+                        travelsLength += thisTravel;
+                        travelsCount++;
+                    }
                 }
             }
         }
@@ -194,15 +192,16 @@ public class PLTdata {
     }
 
     public void setLineCount(int lineCount) {
-        pocetCar = lineCount;
+        linesCount = lineCount;
         populatedLines = 0;
-        status = new byte[pocetCar];
-        lines_1 = new int[pocetCar];
-        lines_2 = new int[pocetCar];
-        point_x = new int[2*pocetCar+1];
-        point_y = new int[2*pocetCar+1];
-        lines_at_point = new int[2*pocetCar+1];        
-        for (int j=0; j<2*pocetCar+1; j++) {
+        status = new byte[linesCount];
+        lines_1 = new int[linesCount];
+        lines_2 = new int[linesCount];
+        lineType = new int[linesCount];
+        point_x = new int[2*linesCount+1];
+        point_y = new int[2*linesCount+1];
+        lines_at_point = new int[2*linesCount+1];        
+        for (int j=0; j<2*linesCount+1; j++) {
             lines_at_point[j] = 0;
         }
     }
@@ -213,13 +212,26 @@ public class PLTdata {
         int startId = getPointId(startX, startY, true);
         int endId = getPointId(endX, endY, true);
 //        System.out.println("startId = " + startId + "; endId = " + endId);
+        if (populatedLines >= linesCount) {
+            lines_1 = inflateIntArray(lines_1,100);
+            lines_2 = inflateIntArray(lines_2,100);
+            lineType = inflateIntArray(lineType,100);
+            status = inflateByteArray(status,100);
+            linesCount += 100;
+        }
         lines_1[populatedLines] = startId;
         lines_2[populatedLines] = endId;
+        lineType[populatedLines] = 0;
         populatedLines++;
     }
 
+    public void addLine(int startX, int startY, int endX, int endY, int type) {
+        addLine(startX, startY, endX, endY);
+        lineType[populatedLines-1] = type;
+    }   
+    
     private int getPointId(int x, int y, boolean createNew) {
-        for (int i=0; i < pocetBodu; i++) {
+        for (int i=0; i < pointsCount; i++) {
             if (point_x[i] == x && point_y[i] == y) {
                 if (createNew) {
                     lines_at_point[i]++;
@@ -234,11 +246,11 @@ public class PLTdata {
             } else if (! boundingBox.contains(x, y)) {
                 boundingBox.add(x, y);
             }
-            point_x[pocetBodu] = x;
-            point_y[pocetBodu] = y;
-            lines_at_point[pocetBodu] = 1;
-            pocetBodu++;
-            return pocetBodu - 1;
+            point_x[pointsCount] = x;
+            point_y[pointsCount] = y;
+            lines_at_point[pointsCount] = 1;
+            pointsCount++;
+            return pointsCount - 1;
         } else {
             return -1;
         }
@@ -349,21 +361,21 @@ public class PLTdata {
         }
     }
     
-    public double getDelkaCar() {
-        return delkaCar;
+    public double getLinesLength() {
+        return linesLength;
     }
 
-    public double getDelkaPrejezdu() {
-        return delkaPrejezdu;
+    public double getTravelsLength() {
+        return travelsLength;
     }
 
 
-    public int getPocetPrejezdu() {
-        return pocetPrejezdu;
+    public int getTravelsCount() {
+        return travelsCount;
     }
 
-    public int getPocetBodu() {
-        return pocetBodu;
+    public int getPointsCount() {
+        return pointsCount;
     }
 
     public void addPropertyChangeListener(PropertyChangeListener listener) {
@@ -386,8 +398,8 @@ public class PLTdata {
         return point_y;
     }
 
-    public int getPocetCar() {
-        return pocetCar;
+    public int getLinesCount() {
+        return linesCount;
     }
 
     public int getPopulatedLines() {
@@ -416,7 +428,7 @@ public class PLTdata {
      * @return status
      */
     public byte getStatusAtPoint(int point) {
-        for (int i=0; i<pocetCar; i++) {
+        for (int i=0; i<linesCount; i++) {
             if (point == lines_1[i] || point == lines_2[i]) {
                 if ((status[i] == 5)
                         || (point == lines_1[i] && status[i] == 1)
@@ -450,22 +462,32 @@ public class PLTdata {
     @Override
     protected Object clone() {
         PLTdata p = new PLTdata();
-        p.point_x = new int[2*pocetCar+1];
-        p.point_y = new int[2*pocetCar+1];
-        p.lines_at_point = new int[2*pocetCar+1];
-        for (int i=0; i<2*pocetCar+1; i++) {
+        p.point_x = new int[2*linesCount+1];
+        p.point_y = new int[2*linesCount+1];
+        p.lines_at_point = new int[2*linesCount+1];
+        for (int i=0; i<2*linesCount+1; i++) {
             p.point_x[i] = point_x[i];
             p.point_y[i] = point_y[i];
             p.lines_at_point[i] = lines_at_point[i];
         }
-        p.pocetCar = pocetCar;
-        p.pocetBodu = pocetBodu;
+        p.linesCount = linesCount;
+        p.pointsCount = pointsCount;
         p.boundingBox = (Rectangle) boundingBox.clone();
         p.pen = this.pen;
-        p.status = new byte[pocetCar];
-        p.lines_1 = new int[pocetCar];
-        p.lines_2 = new int[pocetCar];
-        
+        p.status = new byte[linesCount];
+        p.lines_1 = new int[linesCount];
+        p.lines_2 = new int[linesCount];
+        p.lineType = new int[linesCount];
+        for (int i=0; i<linesCount; i++) {
+            p.lines_1[i] = lines_1[i];
+            p.lines_2[i] = lines_2[i];
+            p.lineType[i] = lineType[i];
+        }
+        p.subPlotsCount = subPlotsCount;
+        p.subPlots = new PLTdata[subPlotsCount];
+        for (int i=0; i<subPlotsCount; i++) {
+            p.subPlots[i] = (PLTdata) subPlots[i].clone();  
+        }
         return p;
     }
     
@@ -474,6 +496,13 @@ public class PLTdata {
             if (lineNum<=i) {
                 lines_1[i] = lines_1[i+1];
                 lines_2[i] = lines_2[i+1];
+                lineType[i] = lineType[i+1];
+                status[i] = status[i+1];
+            }
+        }
+        for (int i=0; i<selectedLines.length; i++) {
+            if (lineNum<selectedLines[i]) {
+                selectedLines[i]--;
             }
         }
         populatedLines--;
@@ -518,4 +547,65 @@ public class PLTdata {
         }
         return false;
     }
+    
+    /**
+     * Moves lines referenced in 'slectedLines' to unique subplot
+     */
+    public void makeSubPlotFromSelection() {        
+        if (selectedLines.length > 0) {
+            subPlotsCount++;
+            PLTdata newSubPlots[] = new PLTdata[subPlotsCount];
+            System.arraycopy(subPlots, 0, newSubPlots, 0, subPlots.length);
+            PLTdata newSubPlot = new PLTdata();
+
+            newSubPlot.setLineCount(selectedLines.length);
+            newSubPlot.setPen(getPen());
+            for (int i=0; i<selectedLines.length; i++) {
+                newSubPlot.addLine(point_x[lines_1[selectedLines[i]]],
+                                   point_y[lines_1[selectedLines[i]]],
+                                   point_x[lines_2[selectedLines[i]]],
+                                   point_y[lines_2[selectedLines[i]]]);
+            }
+            
+            addLine(point_x[lines_1[selectedLines[0]]],
+                    point_y[lines_1[selectedLines[0]]],
+                    point_x[lines_2[selectedLines[selectedLines.length-1]]],
+                    point_y[lines_2[selectedLines[selectedLines.length-1]]],
+                    10+subPlotsCount-1);
+            
+            for (int i=0; i<selectedLines.length; i++) {
+                deleteLine(selectedLines[i]);
+            }
+            
+            selectedLines = new int[0];
+
+            newSubPlots[subPlotsCount-1] = newSubPlot;
+            subPlots = newSubPlots;
+        }
+    }
+
+    public PLTdata[] getSubPlots() {
+        return subPlots;
+    }    
+    
+    public boolean hasSelection() {
+        return selectedLines.length > 0;
+    }
+    
+    private int[] inflateIntArray(int[] oldArray, int size) {
+        int newArray[] = new int[oldArray.length+size];
+        System.arraycopy(oldArray, 0, newArray, 0, oldArray.length);
+        return newArray;        
+    }
+
+    private byte[] inflateByteArray(byte[] oldArray, int size) {
+        byte newArray[] = new byte[oldArray.length+size];
+        System.arraycopy(oldArray, 0, newArray, 0, oldArray.length);
+        return newArray;        
+    }
+
+    public int[] getLineType() {
+        return lineType;
+    }
+        
 } 
