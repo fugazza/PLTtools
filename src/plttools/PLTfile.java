@@ -117,7 +117,9 @@ public class PLTfile {
                         } else {
                             x2a = Integer.parseInt(st2.nextToken());
                             y2a = Integer.parseInt(st2.nextToken());
-                            pltData[penToIndex[activePen]].addLine(lastX, lastY, x2a, y2a);
+                            if (lastX != x2a || lastY!=y2a) {
+                                pltData[penToIndex[activePen]].addLine(lastX, lastY, x2a, y2a);
+                            }
                             lastX = x2a;
                             lastY = y2a;                            
                         }

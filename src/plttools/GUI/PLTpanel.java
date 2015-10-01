@@ -149,6 +149,7 @@ public class PLTpanel extends JPanel {
                         for (PLTdata p: plt.getPltData()) {
                             if (p.getPen() == highlightedPen) {
                                 p.deleteLine(highlightedLine);
+                                p.calculateStats();
                                 highlightedLine = -1;
                                 highlightedPen = -1;
                                 repaint();
@@ -161,11 +162,17 @@ public class PLTpanel extends JPanel {
                         for (PLTdata p: plt.getPltData()) {
                             if (p.hasSelection()) {
                                 p.makeSubPlotFromSelection();
-                                break;
                             }
                         }
                         repaint();
                    }
+                } else if (e.getKeyCode() == KeyEvent.VK_L) {
+                    if (plt != null && plt.getPltData() != null) {
+                        for (PLTdata p: plt.getPltData()) {
+                            p.makeSubplotsFromLoops();
+                        }
+                        repaint();
+                   }                    
                 } else if (e.getKeyCode() == KeyEvent.VK_ADD) {
                     setNewScale(scale*1.2, getWidth()/2, getHeight()/2);
                 } else if (e.getKeyCode() == KeyEvent.VK_SUBTRACT) {

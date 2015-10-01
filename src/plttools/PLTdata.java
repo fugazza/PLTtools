@@ -95,7 +95,7 @@ public class PLTdata {
             x2a = point_x[foundPoint];
             y2a = point_y[foundPoint];
             searchNext = false;
-            for (int i=0; i<linesCount; i++) {
+            for (int i=0; i<populatedLines; i++) {
                 if (i!=ka) {
                     if (point_x[lines_1[i]]==x2a && point_y[lines_1[i]]==y2a) {
                         numAt2 = lines_at_point[lines_2[i]];
@@ -168,13 +168,17 @@ public class PLTdata {
         travelsCount = 0;
         travelsLength = 0;
         linesLength = 0;
-        for (int i=0; i < linesCount; i++) {
+        status = new byte[linesCount];
+//        System.out.println("Will calculate stats for " + populatedLines + " lines.");
+        for (int i=0; i < populatedLines; i++) {
 //            propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*k)/pocetCar));            
             if (lineType[i] >= 10) { // subplot
+//                System.out.println("Calculating stats for subplot on line " + i);
                 subPlots[lineType[i]-10].calculateStats();
                 linesLength += subPlots[lineType[i]-10].linesLength;
                 travelsCount += subPlots[lineType[i]-10].travelsCount;
                 travelsLength += subPlots[lineType[i]-10].travelsLength;
+                status[i] = 5;
             } else {
                 linesLength += Math.sqrt(Math.pow(point_x[lines_2[i]] - point_x[lines_1[i]], 2) + Math.pow(point_y[lines_2[i]] - point_y[lines_1[i]], 2));
                 status[i] = checkStatus(i);
@@ -428,7 +432,7 @@ public class PLTdata {
      * @return status
      */
     public byte getStatusAtPoint(int point) {
-        for (int i=0; i<linesCount; i++) {
+        for (int i=0; i<populatedLines; i++) {
             if (point == lines_1[i] || point == lines_2[i]) {
                 if ((status[i] == 5)
                         || (point == lines_1[i] && status[i] == 1)
@@ -492,7 +496,10 @@ public class PLTdata {
     }
     
     public void deleteLine(int lineNum) {
-        for (int i=0; i<populatedLines-1; i++) {
+        lines_at_point[lines_1[lineNum]]--;
+        lines_at_point[lines_2[lineNum]]--;
+        populatedLines--;
+        for (int i=0; i<populatedLines; i++) {
             if (lineNum<=i) {
                 lines_1[i] = lines_1[i+1];
                 lines_2[i] = lines_2[i+1];
@@ -505,7 +512,6 @@ public class PLTdata {
                 selectedLines[i]--;
             }
         }
-        populatedLines--;
     }
     
     public void setSelection(int lines[]) {
@@ -517,6 +523,13 @@ public class PLTdata {
         System.arraycopy(selectedLines, 0, newSel, 0, selectedLines.length);
         System.arraycopy(lines, 0, newSel, selectedLines.length, lines.length);
         selectedLines = newSel;
+    }
+    
+    public void addSelection(int lineNum) {
+        int newSel[] = new int[selectedLines.length + 1];
+        System.arraycopy(selectedLines, 0, newSel, 0, selectedLines.length);
+        newSel[selectedLines.length] = lineNum;
+        selectedLines = newSel;        
     }
     
     public void deleteSelection(int lines[]) {
@@ -581,6 +594,8 @@ public class PLTdata {
 
             newSubPlots[subPlotsCount-1] = newSubPlot;
             subPlots = newSubPlots;
+            System.out.println("Sobplots made, calculating stats.");
+            calculateStats();
         }
     }
 
@@ -607,5 +622,107 @@ public class PLTdata {
     public int[] getLineType() {
         return lineType;
     }
-        
+    
+    public void makeSubplotsFromLoops() {
+        System.out.println("Making subplot from loops");
+        boolean haveAllLoops = false;
+        int loopNum = 0;
+        while (!haveAllLoops) {            
+            setSelection(new int[0]);
+
+            System.out.println("Searching for loop no. " + (loopNum++));
+
+            // find all loops and get their sizes
+            boolean alreadyUsedLines[] = new boolean[populatedLines];
+            int loopStartLine[] = new int[(int) Math.ceil(populatedLines/3.0)];
+            double loopArea[] = new double[(int) Math.ceil(populatedLines/3.0)];
+            int loopCount = 0;
+            Rectangle maxRect = new Rectangle();
+            double maxArea = 0;
+            int maxLoop = -1;
+            for (int i=0; i<populatedLines; i++) { // last line cannot be beginning of other loop
+                if (alreadyUsedLines[i]) {
+                    continue;
+                }
+                alreadyUsedLines[i] = true;
+                // find the loop
+                if (status[i] == 3) {
+                    if (i==populatedLines-1) {
+                        System.out.println("Something is terribly wrong. Last line cannot be beginning of closed loop.");
+                        break;
+                    }
+                    
+                    loopStartLine[loopCount] = i;
+                    int startPoint = lines_1[i];
+                    int lastPoint = lines_2[i];
+                    System.out.println("Loop starting at line " + i + " (type " + lineType[i] + "), point " + startPoint + " to " + lastPoint);
+                    Rectangle area = new Rectangle(new Point(point_x[startPoint],point_y[startPoint]));
+                    boolean searchForNextLine = true;
+                    while (searchForNextLine) {
+                        for (int j=0; j<populatedLines; j++) {
+                            if (alreadyUsedLines[j]) {
+                                continue;
+                            }
+                            if (status[j] == 3 && lastPoint == lines_1[j]) {
+                                alreadyUsedLines[j] = true;
+                                area.add(new Point(point_x[lastPoint],point_y[lastPoint]));
+                                lastPoint = lines_2[j];
+                                System.out.println("   continues on line " +j + ", point " + lastPoint);
+                                if (lastPoint == startPoint) {
+                                    System.out.println("And finishes here");
+                                    searchForNextLine = false; // we did the complete loop
+                                }
+                                break;
+                            } else if (status[j] == 3 && lastPoint == lines_2[j]) {
+                                alreadyUsedLines[j] = true;
+                                area.add(new Point(point_x[lastPoint],point_y[lastPoint]));
+                                lastPoint = lines_1[j];
+                                System.out.println("   continues on line " +j + ", point " + lastPoint);
+                                if (lastPoint == startPoint) {
+                                    System.out.println("And finishes here");
+                                    searchForNextLine = false; // we did the complete loop
+                                }
+                                break; 
+                            }
+                            if (j== populatedLines-1 && searchForNextLine) {
+                                System.out.println("Attention: Hit last line, no other loop segment found!");
+                                searchForNextLine = false;
+                            }
+                        }
+                    }
+                    // calculate the size of loop
+                    loopArea[loopCount] = area.getWidth() * area.getHeight();
+
+                    if (loopArea[loopCount] > maxArea) {
+                        maxArea = loopArea[loopCount];
+                        maxRect = area;
+                        maxLoop = loopStartLine[loopCount];
+                    }
+                    loopCount++;
+                }            
+            }
+
+            if (maxLoop == -1) {
+                // no loop found
+                System.out.println("No more loops found.");
+                haveAllLoops = true;
+                break;
+            } else {
+                // now we have the biggest loop -> move everything inside to selection and then to subplot
+                System.out.println("Found loop beginning on line " + maxLoop + " with area of " + maxArea + "; total count of lines = " + populatedLines);
+                maxRect.grow(1, 1);
+                for (int i=0; i<populatedLines; i++) {
+                    if (maxRect.contains(point_x[lines_1[i]], point_y[lines_1[i]]) && maxRect.contains(point_x[lines_2[i]], point_y[lines_2[i]])) {
+                        addSelection(i);
+                    }
+                }
+                System.out.println("Selection contains " + selectedLines.length + " lines.");
+                if (selectedLines.length == 0) {
+                    System.out.println("Zero size selection, something is wrong.");
+                    break;
+                } 
+                makeSubPlotFromSelection();                
+            }
+        }
+    }
 } 
