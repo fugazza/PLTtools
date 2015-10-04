@@ -55,6 +55,7 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
         pltFile.addPropertyChangeListener(PLTtools.this);
         pltFile.setSettings(settings);
         pLTpanel1.setPlt(pltFile);
+        pLTpanel1.addPropertyChangeListener(PLTtools.this);
         executorService = Executors.newSingleThreadExecutor();
         if (args.length > 0) {
             File f = new File(args[0]);
@@ -687,6 +688,40 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
             jProgressBar1.setValue(0);
             jProgressBar1.setString("Ready");
             displayPLTStats();
+        } else if (evt.getPropertyName().equals("makeSubplotsRequest")) {
+            if (pltFile != null && pltFile.getPltData() != null) {
+                SwingWorker sw = new SwingWorker<Void, Void>() {
+
+                    @Override
+                    protected Void doInBackground() throws Exception {
+                        for (PLTdata p: pltFile.getPltData()) {
+                            p.addPropertyChangeListener(PLTtools.this);
+                            p.makeSubplotsFromLoops();
+                            pLTpanel1.repaint();
+                        }
+                        return null;
+                    }
+
+                };
+                executorService.submit(sw);            
+           }                    
+        } else if (evt.getPropertyName().equals("mergeSubplotsRequest")) {
+            if (pltFile != null && pltFile.getPltData() != null) {
+                SwingWorker sw = new SwingWorker<Void, Void>() {
+
+                    @Override
+                    protected Void doInBackground() throws Exception {
+                        for (PLTdata p: pltFile.getPltData()) {
+                            p.addPropertyChangeListener(PLTtools.this);
+                            p.mergeAllSubplots();
+                            pLTpanel1.repaint();
+                        }
+                        return null;
+                    }
+
+                };
+                executorService.submit(sw);            
+           }                    
         }
     }
 

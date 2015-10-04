@@ -25,6 +25,23 @@ public class ModifiedGreedyOptimizer extends AbstractOptimizer {
         int l1, l2, x1, y1, x2, y2;
         p.setLineCount(pd.getPopulatedLines());
         p.setPen(pd.getPen());
+
+        // optimize all subplots first
+        for (PLTdata subPlot: pd.getSubPlots()) {
+            ModifiedGreedyOptimizer optimizer = new ModifiedGreedyOptimizer();
+            optimizer.addPropertyChangeListener(propertySupport.getPropertyChangeListeners()[0]);
+            optimizer.setSettings(settings);
+            System.out.println("optimization of subplot start");
+            optimizer.setData(subPlot);
+            
+            PLTdata optimizedSubPlot;
+            optimizedSubPlot = optimizer.optimize();
+            optimizedSubPlot.addPropertyChangeListener(propertySupport.getPropertyChangeListeners()[0]);
+            optimizedSubPlot.calculateStats();
+            
+            p.addSubPlot(optimizedSubPlot);
+        }
+
         while (numProcessed < pd.getPopulatedLines()) {
             System.out.println("processed="+numProcessed+"; range = "+range);
             propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*numProcessed)/pd.getPopulatedLines()));                            
@@ -60,11 +77,11 @@ public class ModifiedGreedyOptimizer extends AbstractOptimizer {
                             && (!findLineStart || pd.getStatus()[j]!=4))) {
                         
                         if (vzdalenost1==0 || (vzdalenost2!=0 && ((pd.getStatus()[j]==1) || (vzdalenost1<=vzdalenost2 && pd.getStatus()[j]!=2)))) {
-                            p.addLine(x1, y1, x2, y2);
+                            p.addLine(x1, y1, x2, y2, pd.getLineType()[j]);
                             lastX2 = x2;
                             lastY2 = y2;
                         } else {
-                            p.addLine(x2, y2, x1, y1);
+                            p.addLine(x2, y2, x1, y1, pd.getLineType()[j]);
                             lastX2 = x1;
                             lastY2 = y1;
                         }

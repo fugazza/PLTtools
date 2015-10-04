@@ -167,12 +167,9 @@ public class PLTpanel extends JPanel {
                         repaint();
                    }
                 } else if (e.getKeyCode() == KeyEvent.VK_L) {
-                    if (plt != null && plt.getPltData() != null) {
-                        for (PLTdata p: plt.getPltData()) {
-                            p.makeSubplotsFromLoops();
-                        }
-                        repaint();
-                   }                    
+                    firePropertyChange("makeSubplotsRequest", false, true);
+                } else if (e.getKeyCode() == KeyEvent.VK_O) {
+                    firePropertyChange("mergeSubplotsRequest", false, true);                    
                 } else if (e.getKeyCode() == KeyEvent.VK_ADD) {
                     setNewScale(scale*1.2, getWidth()/2, getHeight()/2);
                 } else if (e.getKeyCode() == KeyEvent.VK_SUBTRACT) {
@@ -295,7 +292,7 @@ public class PLTpanel extends JPanel {
         }              
         
         for (int i = 0; i < pocet; i++) {
-            if (kreslitPrejezdy && (lines_1[i] != lastPoint)) {
+            if (kreslitPrejezdy && (lines_1[i] != lastPoint) && i>0) {
                 g.setColor(getColorForPen(-1));
                 g.setStroke(new BasicStroke(1));
                 g.drawLine(transformX(lastX), transformY(lastY),

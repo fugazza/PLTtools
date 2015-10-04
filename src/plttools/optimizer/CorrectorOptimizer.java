@@ -28,6 +28,23 @@ public class CorrectorOptimizer extends AbstractOptimizer {
         p.setPen(pd.getPen());
         p.addPropertyChangeListener(propertySupport.getPropertyChangeListeners()[0]);
 
+        // optimize all subplots first
+        for (PLTdata subPlot: pd.getSubPlots()) {
+            CorrectorOptimizer optimizer = new CorrectorOptimizer();
+            optimizer.addPropertyChangeListener(propertySupport.getPropertyChangeListeners()[0]);
+            optimizer.setSettings(settings);
+            optimizer.boundingBox = this.boundingBox;
+            System.out.println("optimization of subplot start");
+            optimizer.setData(subPlot);
+            
+            PLTdata optimizedSubPlot;
+            optimizedSubPlot = optimizer.optimize();
+            optimizedSubPlot.addPropertyChangeListener(propertySupport.getPropertyChangeListeners()[0]);
+            optimizedSubPlot.calculateStats();
+            
+            p.addSubPlot(optimizedSubPlot);
+        }
+        
         if (settings.getCorrectorMoveToOrigin()) {
             offsetX = (int) (boundingBox.getMinX() - settings.getCorrectorOffsetX());
             offsetY = (int) (boundingBox.getMinY() - settings.getCorrectorOffsetY());
@@ -246,7 +263,7 @@ public class CorrectorOptimizer extends AbstractOptimizer {
                 x1_2 = pd.getPoint_x()[l1_2];
                 y1_2 = pd.getPoint_y()[l1_2];
                 if (leaveOriginaLines || (! lineProcessed[i] && pd.calculateDistance(l1_1,l1_2) > threshold)) {
-                    p.addLine(x1_1 - offsetX, y1_1- offsetY, x1_2- offsetX, y1_2- offsetY);  
+                    p.addLine(x1_1 - offsetX, y1_1- offsetY, x1_2- offsetX, y1_2- offsetY, pd.getLineType()[i]);  
                 }
             }
             
@@ -284,7 +301,7 @@ public class CorrectorOptimizer extends AbstractOptimizer {
                 y1 = pd.getPoint_y()[pd.getLines_1()[i]] - offsetY;
                 x2 = pd.getPoint_x()[pd.getLines_2()[i]] - offsetX;
                 y2 = pd.getPoint_y()[pd.getLines_2()[i]] - offsetY;
-                p.addLine(x1, y1, x2, y2);
+                p.addLine(x1, y1, x2, y2, pd.getLineType()[i]);
 //                System.out.println("added line ["+x1+";" + y1 + "] ["+ x2 + ";" + y2 +"]");
             }
             p.calculateDistances();

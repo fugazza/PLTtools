@@ -4,7 +4,6 @@
  */
 package plttools;
 
-import com.sun.xml.internal.ws.message.saaj.SAAJHeader;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.beans.PropertyChangeListener;
@@ -625,104 +624,197 @@ public class PLTdata {
     
     public void makeSubplotsFromLoops() {
         System.out.println("Making subplot from loops");
-        boolean haveAllLoops = false;
-        int loopNum = 0;
-        while (!haveAllLoops) {            
-            setSelection(new int[0]);
+        propertySupport.firePropertyChange("progressMessage", null, "making subplots for pen " + pen);
+        propertySupport.firePropertyChange("progressValue", -1, 0);
+        
+        int minRequiredArea = 50000; 
 
-            System.out.println("Searching for loop no. " + (loopNum++));
-
-            // find all loops and get their sizes
-            boolean alreadyUsedLines[] = new boolean[populatedLines];
-            int loopStartLine[] = new int[(int) Math.ceil(populatedLines/3.0)];
-            double loopArea[] = new double[(int) Math.ceil(populatedLines/3.0)];
-            int loopCount = 0;
-            Rectangle maxRect = new Rectangle();
-            double maxArea = 0;
-            int maxLoop = -1;
-            for (int i=0; i<populatedLines; i++) { // last line cannot be beginning of other loop
-                if (alreadyUsedLines[i]) {
-                    continue;
+        boolean alreadyUsedLines[] = new boolean[populatedLines];
+        int loopStartLine[] = new int[(int) Math.ceil(populatedLines/3.0)];
+        Rectangle loops[] = new Rectangle[(int) Math.ceil(populatedLines/3.0)];
+        boolean validLoop[] = new boolean[(int) Math.ceil(populatedLines/3.0)];
+        int loopCount = 0;
+        // find all loops and check if they are valid
+        for (int i=0; i<populatedLines; i++) { // last line cannot be beginning of other loop
+            if (alreadyUsedLines[i]) {
+                continue;
+            }
+            alreadyUsedLines[i] = true;
+            // find the loop
+            if (status[i] == 3) {
+                if (i==populatedLines-1) {
+                    System.out.println("Something is terribly wrong. Last line cannot be beginning of closed loop.");
+                    break;
                 }
-                alreadyUsedLines[i] = true;
-                // find the loop
-                if (status[i] == 3) {
-                    if (i==populatedLines-1) {
-                        System.out.println("Something is terribly wrong. Last line cannot be beginning of closed loop.");
-                        break;
-                    }
-                    
-                    loopStartLine[loopCount] = i;
-                    int startPoint = lines_1[i];
-                    int lastPoint = lines_2[i];
-                    System.out.println("Loop starting at line " + i + " (type " + lineType[i] + "), point " + startPoint + " to " + lastPoint);
-                    Rectangle area = new Rectangle(new Point(point_x[startPoint],point_y[startPoint]));
-                    boolean searchForNextLine = true;
-                    while (searchForNextLine) {
-                        for (int j=0; j<populatedLines; j++) {
-                            if (alreadyUsedLines[j]) {
-                                continue;
+
+                loopStartLine[loopCount] = i;
+                int startPoint = lines_1[i];
+                int lastPoint = lines_2[i];
+                System.out.println("Loop starting at line " + i + " (type " + lineType[i] + "), point " + startPoint + " to " + lastPoint);
+                Rectangle area = new Rectangle(new Point(point_x[startPoint],point_y[startPoint]));
+                boolean searchForNextLine = true;
+                while (searchForNextLine) {
+                    for (int j=0; j<populatedLines; j++) {
+                        if (alreadyUsedLines[j]) {
+                            continue;
+                        }
+                        if (status[j] == 3 && lastPoint == lines_1[j]) {
+                            alreadyUsedLines[j] = true;
+                            area.add(new Point(point_x[lastPoint],point_y[lastPoint]));
+                            lastPoint = lines_2[j];
+                            System.out.println("   continues on line " +j + ", point " + lastPoint);
+                            if (lastPoint == startPoint) {
+                                System.out.println("And finishes here");
+                                searchForNextLine = false; // we did the complete loop
                             }
-                            if (status[j] == 3 && lastPoint == lines_1[j]) {
-                                alreadyUsedLines[j] = true;
-                                area.add(new Point(point_x[lastPoint],point_y[lastPoint]));
-                                lastPoint = lines_2[j];
-                                System.out.println("   continues on line " +j + ", point " + lastPoint);
-                                if (lastPoint == startPoint) {
-                                    System.out.println("And finishes here");
-                                    searchForNextLine = false; // we did the complete loop
-                                }
-                                break;
-                            } else if (status[j] == 3 && lastPoint == lines_2[j]) {
-                                alreadyUsedLines[j] = true;
-                                area.add(new Point(point_x[lastPoint],point_y[lastPoint]));
-                                lastPoint = lines_1[j];
-                                System.out.println("   continues on line " +j + ", point " + lastPoint);
-                                if (lastPoint == startPoint) {
-                                    System.out.println("And finishes here");
-                                    searchForNextLine = false; // we did the complete loop
-                                }
-                                break; 
+                            break;
+                        } else if (status[j] == 3 && lastPoint == lines_2[j]) {
+                            alreadyUsedLines[j] = true;
+                            area.add(new Point(point_x[lastPoint],point_y[lastPoint]));
+                            lastPoint = lines_1[j];
+                            System.out.println("   continues on line " +j + ", point " + lastPoint);
+                            if (lastPoint == startPoint) {
+                                System.out.println("And finishes here");
+                                searchForNextLine = false; // we did the complete loop
                             }
-                            if (j== populatedLines-1 && searchForNextLine) {
-                                System.out.println("Attention: Hit last line, no other loop segment found!");
-                                searchForNextLine = false;
-                            }
+                            break; 
+                        }
+                        if (j== populatedLines-1 && searchForNextLine) {
+                            System.out.println("Attention: Hit last line, no other loop segment found!");
+                            searchForNextLine = false;
                         }
                     }
-                    // calculate the size of loop
-                    loopArea[loopCount] = area.getWidth() * area.getHeight();
+                }
 
-                    if (loopArea[loopCount] > maxArea) {
-                        maxArea = loopArea[loopCount];
-                        maxRect = area;
-                        maxLoop = loopStartLine[loopCount];
+                // process the loop
+                loops[loopCount] = area;
+                // calculate the size of loop and check if it is bigger than minimal loop size
+                double loopArea = area.getWidth() * area.getHeight();
+                if (loopArea > minRequiredArea) {
+                    // then continue on other checks
+                    validLoop[loopCount] = true;
+                    for (int j=0; j<loopCount; j++) {
+                        if (! validLoop[j]) {
+                            continue;
+                        }
+                        // valid loop must not be inside of other loop
+                        if (loops[j].contains(area)) {
+                            validLoop[loopCount] = false;
+                            System.out.println("Loop is part of loop " + j);
+                            break;
+                        }
+                        // if there is loop, that is contained within new found loop, then the original loop is not valid
+                        if (area.contains(loops[j])) {
+                            validLoop[j] = false;
+                            System.out.println("Loop is " + j + " invalidated, because it is part of this loop.");
+                        }
                     }
-                    loopCount++;
-                }            
-            }
+                    System.out.println("Found loop beginning on line " + loopStartLine[loopCount] + " with area of " + loopArea + "; total count of lines = " + populatedLines);
+                } else {
+                    validLoop[loopCount] = false;
+                    System.out.println("Loop is too small");
+                }
 
-            if (maxLoop == -1) {
-                // no loop found
-                System.out.println("No more loops found.");
-                haveAllLoops = true;
-                break;
-            } else {
-                // now we have the biggest loop -> move everything inside to selection and then to subplot
-                System.out.println("Found loop beginning on line " + maxLoop + " with area of " + maxArea + "; total count of lines = " + populatedLines);
-                maxRect.grow(1, 1);
-                for (int i=0; i<populatedLines; i++) {
-                    if (maxRect.contains(point_x[lines_1[i]], point_y[lines_1[i]]) && maxRect.contains(point_x[lines_2[i]], point_y[lines_2[i]])) {
-                        addSelection(i);
+                // advance to next loop
+                propertySupport.firePropertyChange("progressValue", 0, (int) 50*i/populatedLines);
+                loopCount++;
+            }            
+        }
+
+        // go throught all valid loops found and make subplots from them
+        for (int i=0; i<loopCount; i++) {
+            if (validLoop[i]) {
+                setSelection(new int[0]);
+                Rectangle myLoop = loops[i];
+                myLoop.grow(1, 1);
+                for (int j=0; j<populatedLines; j++) {
+                    if (myLoop.contains(point_x[lines_1[j]], point_y[lines_1[j]]) && myLoop.contains(point_x[lines_2[j]], point_y[lines_2[j]])) {
+                        addSelection(j);
                     }
                 }
                 System.out.println("Selection contains " + selectedLines.length + " lines.");
                 if (selectedLines.length == 0) {
                     System.out.println("Zero size selection, something is wrong.");
-                    break;
-                } 
-                makeSubPlotFromSelection();                
+                } else {
+                    makeSubPlotFromSelection();  
+                }
+            }
+            propertySupport.firePropertyChange("progressValue", 0, (int) 50+50*i/loopCount);
+        }
+        propertySupport.firePropertyChange("progressFinished", false, true);        
+    }
+
+    public void addSubPlot(PLTdata subplot) {
+        subPlotsCount++;
+        PLTdata newSubPlots[] = new PLTdata[subPlotsCount];
+        System.arraycopy(subPlots, 0, newSubPlots, 0, subPlots.length);
+        newSubPlots[subPlotsCount-1] = subplot;
+        subPlots = newSubPlots;
+    }
+    
+    public void mergeAllSubplots() {
+        propertySupport.firePropertyChange("progressMessage", null, "merging subplots for pen " + pen);
+        propertySupport.firePropertyChange("progressValue", -1, 0);
+
+        // count total number of lines
+        int newLinesCount = populatedLines;
+        for (PLTdata subplot: subPlots) {
+            newLinesCount = newLinesCount + subplot.getPopulatedLines() - 1;
+        }
+        System.out.println("Merging all subplots - there will be " + newLinesCount + " new lines.");
+        
+        // keep current arrays for merging process
+        byte oldStatus[] = status;
+        int oldLines_1[] = lines_1;
+        int oldLines_2[] = lines_2;
+        int oldLineType[] = lineType;
+        int oldPoint_x[] = point_x;
+        int oldPoint_y[] = point_y;
+        int oldLines_at_point[] = lines_at_point; 
+        int oldPopulatedLines = populatedLines;
+        int oldLinesCount = linesCount;
+        
+        // create new arrays
+        linesCount = newLinesCount;
+        pointsCount = 0;
+        populatedLines = 0;
+        status = new byte[newLinesCount];
+        lines_1 = new int[newLinesCount];
+        lines_2 = new int[newLinesCount];
+        lineType = new int[newLinesCount];
+        point_x = new int[2*newLinesCount+1];
+        point_y = new int[2*newLinesCount+1];
+        lines_at_point = new int[2*newLinesCount+1];        
+        
+        
+        // copy all points to new field
+        for (int i=0; i<oldPopulatedLines; i++) {
+            if (oldLineType[i] < 10) {
+                // just copy the line
+                addLine(oldPoint_x[oldLines_1[i]], oldPoint_y[oldLines_1[i]], oldPoint_x[oldLines_2[i]], oldPoint_y[oldLines_2[i]], oldLineType[i]);
+                propertySupport.firePropertyChange("progressValue", 0, (int) 100*populatedLines/newLinesCount);
+            } else {
+                // copy all lines from subplot
+                PLTdata subplot = subPlots[oldLineType[i]-10];
+                int SPlines_1[] = subplot.getLines_1();
+                int SPlines_2[] = subplot.getLines_2();
+                int SPpoint_x[] = subplot.getPoint_x();
+                int SPpoint_y[] = subplot.getPoint_y();
+                int SPlineType[] = subplot.getLineType();
+                
+                for (int j=0; j<subplot.getPopulatedLines(); j++) {
+                    addLine(SPpoint_x[SPlines_1[j]], SPpoint_y[SPlines_1[j]], SPpoint_x[SPlines_2[j]], SPpoint_y[SPlines_2[j]], SPlineType[j]);                    
+                    propertySupport.firePropertyChange("progressValue", 0, (int) 100*populatedLines/newLinesCount);
+                }
             }
         }
+        
+        // remove all subplots
+        subPlotsCount = 0;
+        subPlots = new PLTdata[0];
+        
+        // recalculates statistics
+        calculateStats();
+        propertySupport.firePropertyChange("progressFinished", false, true);        
     }
 } 
