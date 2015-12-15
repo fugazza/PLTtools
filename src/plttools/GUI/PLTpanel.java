@@ -39,10 +39,12 @@ public class PLTpanel extends JPanel {
     private boolean kreslitStatus = false;
     private boolean drawDebug = false;
     private boolean displayScale = true;
-    private double centerX;  // int plot units
-    private double centerY;  // int plot units
-    private int maxX;  // int plot units
-    private int maxY;  // int plot units
+    private double centerX;  // in plot units
+    private double centerY;  // in plot units
+    private int maxX;  // in plot units
+    private int maxY;  // in plot units
+    private int minX;  // in plot units
+    private int minY;  // in plot units
     private Point dragPoint = new Point(0,0);
     private int highlightedLine = -1;
     private int highlightedPen = -1;
@@ -145,15 +147,25 @@ public class PLTpanel extends JPanel {
             public void keyPressed(KeyEvent e) {
 //                System.out.println("Key presse - code = " + e.getKeyCode() + "(code for del = "+KeyEvent.VK_DELETE+")");
                 if (e.getKeyCode() == KeyEvent.VK_DELETE) {
-                    if (plt != null && plt.getPltData() != null && highlightedLine != -1) {
-                        for (PLTdata p: plt.getPltData()) {
-                            if (p.getPen() == highlightedPen) {
-                                p.deleteLine(highlightedLine);
-                                p.calculateStats();
-                                highlightedLine = -1;
-                                highlightedPen = -1;
-                                repaint();
-                                break;
+                    if (plt != null && plt.getPltData() != null) {
+                        if (selectMode) {
+                            for (PLTdata p: plt.getPltData()) {
+                                System.out.println("Bounding box for pen " + p.getPen() + ": x=" + p.getBoundingBox().x + ": y=" + p.getBoundingBox().y + ": width=" + p.getBoundingBox().width + ": height=" + p.getBoundingBox().height);
+                                p.deleteAllSelectedLines();
+                                calculateMaxRangeOfPlot();
+                                System.out.println("Bounding box for pen " + p.getPen() + ": x=" + p.getBoundingBox().x + ": y=" + p.getBoundingBox().y + ": width=" + p.getBoundingBox().width + ": height=" + p.getBoundingBox().height);
+                            }
+                            repaint();
+                        } else if (highlightedLine != -1) {
+                            for (PLTdata p: plt.getPltData()) {
+                                if (p.getPen() == highlightedPen) {
+                                    p.deleteLine(highlightedLine);
+                                    p.calculateStats();
+                                    highlightedLine = -1;
+                                    highlightedPen = -1;
+                                    repaint();
+                                    break;
+                                }
                             }
                         }
                     }
@@ -370,8 +382,14 @@ public class PLTpanel extends JPanel {
         if (plt != null && plt.getPltData() != null) {
             // draw the background for area for output of plot
             g.setColor(Color.WHITE);
-            g.fillRect(transformX(0), transformY(maxY), transformX(maxX) - transformX(0), transformY(0) - transformY(maxY));
+            g.fillRect(transformX(minX), transformY(maxY), transformX(maxX) - transformX(minX), transformY(minY) - transformY(maxY));
 //            System.out.println("drawing; scale = " + scale + "maxX = " + plt.getBoundingBox().getMaxX());
+            
+            // draw [0,0] point
+            g.setColor(Color.GRAY);
+            int crossSize = 3*40;
+            g.drawLine(transformX(-crossSize), transformY(0), transformX(crossSize), transformY(0));
+            g.drawLine(transformX(0), transformY(-crossSize), transformX(0), transformY(crossSize));
             for (PLTdata p: plt.getPltData()) {
                 paintPlot(g, p);
             }
@@ -505,26 +523,41 @@ public class PLTpanel extends JPanel {
     }
     
     private void setAutoScaleAndCenter() {
-        maxX = 0;
-        maxY = 0;
+        calculateMaxRangeOfPlot();
+        scale = Math.min(1.0 * (getWidth()-2*margin)/ maxX, 1.0 * (getHeight()-2*margin) / maxY);
+        centerX = (maxX / 2);
+        centerY = (maxY / 2);                  
+    }
+
+    private void calculateMaxRangeOfPlot() {
+        maxX = -100000;
+        maxY = -100000;
+        minX = 100000;
+        minY = 100000;
         // get maximum X and Y from all plots
         if (plt != null && plt.getPltData() != null) {
             for(PLTdata p: plt.getPltData()) {
+                Rectangle bb = p.getBoundingBox();
 //                System.out.println("stats for pen "+ p.getPen()+"; lins count = "+ p.getPocetCar()+"; bounding box = " + p.getBoundingBox());
-                if (p.getBoundingBox().getMaxX() > maxX) {
-                    maxX = (int) p.getBoundingBox().getMaxX();
+                if (bb.getMaxX() > maxX) {
+                    maxX = (int) bb.getMaxX();
                 }
-                if (p.getBoundingBox().getMaxY() > maxY) {
-                    maxY = (int) p.getBoundingBox().getMaxY();
+                if (bb.getMaxY() > maxY) {
+                    maxY = (int) bb.getMaxY();
+                }
+                if (bb.getMinX() < minX) {
+                    minX = (int) bb.getMinX();
+                }
+                if (bb.getMinY() < minY) {
+                    minY = (int) bb.getMinY();
                 }
             }
         } else {
             maxX = 10;
             maxY = 10;
-        }
-        scale = Math.min(1.0 * (getWidth()-2*margin)/ maxX, 1.0 * (getHeight()-2*margin) / maxY);
-        centerX = (maxX / 2);
-        centerY = (maxY / 2);                  
+            minX = 0;
+            minY = 0;
+        }        
     }
     
     private void panelMouseDragged(MouseEvent e) {

@@ -462,6 +462,14 @@ public class PLTdata {
         return boundingBox;
     }
 
+    private void recaltulateBoundingBox() {
+        boundingBox = new Rectangle(new Point(point_x[lines_1[0]],point_y[lines_1[0]]));
+        for (int i = 0; i < populatedLines; i++) {
+            boundingBox.add(new Point(point_x[lines_1[i]],point_y[lines_1[i]]));
+            boundingBox.add(new Point(point_x[lines_2[i]],point_y[lines_2[i]]));
+        }
+    }
+    
     @Override
     protected Object clone() {
         PLTdata p = new PLTdata();
@@ -513,6 +521,14 @@ public class PLTdata {
         }
     }
     
+    public void deleteAllSelectedLines() {
+        for (int i: selectedLines) {
+            deleteLine(i);            
+        }
+        selectedLines = new int[0];
+        recaltulateBoundingBox();
+    }
+            
     public void setSelection(int lines[]) {
         selectedLines = lines;
     }
