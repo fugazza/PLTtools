@@ -83,6 +83,7 @@ public class PLTfile {
             System.out.println("parseRaw - before tokenizer, run #"+(i+1));
             StringTokenizer st = new StringTokenizer(rawPLT.toString(),";");
             System.out.println("parseRaw - tokenizer started");
+            iii = 0;
             while (st.hasMoreTokens()) {
                 prikaz = st.nextToken().trim();
                 System.out.println("token i="+(iii++)+"; "+prikaz);
@@ -96,11 +97,15 @@ public class PLTfile {
                             st2.nextToken();
                             countTravels[activePen]++;
                         } else {
-                            x2a = Integer.parseInt(st2.nextToken());
-                            y2a = Integer.parseInt(st2.nextToken());
-        //                    System.out.println("[x,y] = " + x2a + ","+y2a);
-                            lastX = x2a;
-                            lastY = y2a;                            
+                            try {
+                                x2a = Integer.parseInt(st2.nextToken());
+                                y2a = Integer.parseInt(st2.nextToken());
+            //                    System.out.println("[x,y] = " + x2a + ","+y2a);
+                                lastX = x2a;
+                                lastY = y2a;                            
+                            } catch (NumberFormatException e) {
+                                System.out.println("ERROR: wrong token, need two integers only!");
+                            }
                         }
                     }
                     penUp = true;
@@ -115,13 +120,17 @@ public class PLTfile {
                             st2.nextToken();
                             countLines[activePen]++;
                         } else {
-                            x2a = Integer.parseInt(st2.nextToken());
-                            y2a = Integer.parseInt(st2.nextToken());
-                            if (lastX != x2a || lastY!=y2a) {
-                                pltData[penToIndex[activePen]].addLine(lastX, lastY, x2a, y2a);
+                            try {
+                                x2a = Integer.parseInt(st2.nextToken());
+                                y2a = Integer.parseInt(st2.nextToken());
+                                if (lastX != x2a || lastY!=y2a) {
+                                    pltData[penToIndex[activePen]].addLine(lastX, lastY, x2a, y2a);
+                                }
+                                lastX = x2a;
+                                lastY = y2a;                            
+                            } catch (NumberFormatException e) {
+                                System.out.println("ERROR: wrong token, need two integers only!");
                             }
-                            lastX = x2a;
-                            lastY = y2a;                            
                         }
                     }
                     penUp = false;
@@ -146,13 +155,35 @@ public class PLTfile {
                     } else {
                         pltData[penToIndex[activePen]].setPen((byte) activePen);
                     }
+                } else if (prikaz.equals("PDPU")) {
+                    // PDPU makes a dot on actual position - pen goes down, makes a dot on paper, and goes up to move elsewhere
+                    // here it is replaced by horizontal line of the length 1
+                    if (firstRun) {
+                            countLines[activePen]++;
+                    } else {
+                        pltData[penToIndex[activePen]].addLine(lastX, lastY, lastX+1, lastY);
+                    }
+                } else if (prikaz.equals("IN")) {
+                    unknownCommands += prikaz + " - ignored - plot initialization\r\n";
+                } else if (prikaz.equals("SC")) {
+                    unknownCommands += prikaz + " - ignored - default (no) scaling\r\n";
+                } else if (prikaz.startsWith("RO")) {
+                    unknownCommands += prikaz + " - ignored - rotation of coordinate system\r\n";
+                } else if (prikaz.startsWith("IP")) {
+                    unknownCommands += prikaz + " - ignored - input p1 and p2 (no idea, what it is good for)\r\n";
+                } else if (prikaz.startsWith("IW")) {
+                    unknownCommands += prikaz + " - ignored - input window\r\n";
+                } else if (prikaz.startsWith("VS")) {
+                    unknownCommands += prikaz + " - ignored - velocity select\r\n";
+                } else if (prikaz.startsWith("LT")) {
+                    unknownCommands += prikaz + " - ignored - set line type\r\n";
                 } else {
                     unknownCommands += prikaz + "\r\n";
                 }
             }
 
             if (firstRun && unknownCommands.length()>58) {
-                JOptionPane.showMessageDialog(null, unknownCommands, "Unknown commands", JOptionPane.WARNING_MESSAGE);            
+                JOptionPane.showMessageDialog(null, unknownCommands, "Unknown and ignored commands", JOptionPane.WARNING_MESSAGE);            
             }
             
             if (!firstRun) {
