@@ -4,7 +4,10 @@
  */
 package plttools.optimizer;
 
+import java.awt.Rectangle;
+import plttools.ChildrenProgressCalculator;
 import plttools.PLTdata;
+import plttools.ParentProgressCalculator;
 
 /**
  *
@@ -12,9 +15,12 @@ import plttools.PLTdata;
  */
 public class ModifiedGreedyOptimizer extends AbstractOptimizer {
 
+    private final ChildrenProgressCalculator optimizationProgress = new ChildrenProgressCalculator();
+    private ModifiedGreedyOptimizer[] subPlotOptimizers;
+
     @Override
     public PLTdata optimize() {
-        propertySupport.firePropertyChange("progressMessage", null, "modified greedy optimization");
+        progress.setMessage("modified greedy optimization started");
         PLTdata p = new PLTdata();
         boolean processed[] = new boolean[pd.getPopulatedLines()];
         int numProcessed = 0;
@@ -27,24 +33,18 @@ public class ModifiedGreedyOptimizer extends AbstractOptimizer {
         p.setPen(pd.getPen());
 
         // optimize all subplots first
-        for (PLTdata subPlot: pd.getSubPlots()) {
-            ModifiedGreedyOptimizer optimizer = new ModifiedGreedyOptimizer();
-            optimizer.addPropertyChangeListener(propertySupport.getPropertyChangeListeners()[0]);
-            optimizer.setSettings(settings);
+        for (ModifiedGreedyOptimizer optimizer: subPlotOptimizers) {
             System.out.println("optimization of subplot start");
-            optimizer.setData(subPlot);
-            
             PLTdata optimizedSubPlot;
             optimizedSubPlot = optimizer.optimize();
-            optimizedSubPlot.addPropertyChangeListener(propertySupport.getPropertyChangeListeners()[0]);
             optimizedSubPlot.calculateStats();
-            
             p.addSubPlot(optimizedSubPlot);
         }
 
+
         while (numProcessed < pd.getPopulatedLines()) {
             System.out.println("processed="+numProcessed+"; range = "+range);
-            propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*numProcessed)/pd.getPopulatedLines()));                            
+            optimizationProgress.setProgress(numProcessed);
             boolean findLineStart = true;
             if (rangeNulling > 10) {
                 findLineStart = false;
@@ -113,7 +113,7 @@ public class ModifiedGreedyOptimizer extends AbstractOptimizer {
         }
         
         p.calculateStats();
-        propertySupport.firePropertyChange("progressFinished", false, true);
+        progress.finishedAnnouncement();
         return p;
     }
 
@@ -121,5 +121,36 @@ public class ModifiedGreedyOptimizer extends AbstractOptimizer {
     public boolean changesLineCount() {
         return false;
     }
-    
+
+    @Override
+    public Object clone() {
+        ModifiedGreedyOptimizer clon;
+        try {
+            clon = (ModifiedGreedyOptimizer) super.clone();
+        } catch (CloneNotSupportedException ex) {
+            clon = new ModifiedGreedyOptimizer();
+        }
+        clon.settings = this.settings;
+        return clon;
+    }    
+
+    @Override
+    protected void prepareProgressCalculators() {
+        if (pd != null) {
+            optimizationProgress.setMax(pd.getPopulatedLines());
+            subPlotOptimizers = new ModifiedGreedyOptimizer[pd.getSubPlotsCount()];
+            int ii=0;
+            for (PLTdata subPlot: pd.getSubPlots()) {
+                ModifiedGreedyOptimizer optimizer = (ModifiedGreedyOptimizer) this.clone();
+                optimizer.setData(subPlot);
+                subPlotOptimizers[ii++] = optimizer;  
+                ParentProgressCalculator progCalc = new ParentProgressCalculator();
+                progress.register(progCalc);
+                optimizer.setProgressCalculator(progCalc);
+            }
+        } else {
+            optimizationProgress.setMax(100);
+        }
+        progress.register(optimizationProgress);
+    }
 }

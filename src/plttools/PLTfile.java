@@ -26,9 +26,9 @@ public class PLTfile {
     private File myFile;
     private StringBuilder rawPLT;
     private PLTdata[] pltData;
-    private PropertyChangeSupport propertySupport = new PropertyChangeSupport(this);
+    private final PropertyChangeSupport propertySupport = new PropertyChangeSupport(this);
+    private final ParentProgressCalculator progressCalculator = new ParentProgressCalculator();
     private PLTdata optimizedPltData[];
-    private PropertyChangeListener parent;
     private SettingsData settings;
     
     public void readPLTfromFile(File file) {
@@ -218,7 +218,6 @@ public class PLTfile {
         }
         
         for (PLTdata p: pltData) {
-            p.addPropertyChangeListener(parent);
             p.calculateStats();            
         }
         System.out.println("before property fire");
@@ -231,41 +230,62 @@ public class PLTfile {
     }
     
     public void optimizePLT(int alghoritm, int pen) {
-        AbstractOptimizer optimizer;
+        AbstractOptimizer[] optimizers = new AbstractOptimizer[pltData.length];
         switch(alghoritm) {
-            case 3:
+            case 3: {
 //                System.out.println("Corrector");
-                optimizer = new CorrectorOptimizer();
-                ((CorrectorOptimizer) optimizer).boundingBox = pltData[0].getBoundingBox();
+                CorrectorOptimizer optimizer = new CorrectorOptimizer();
+                optimizer.boundingBox = pltData[0].getBoundingBox();
                 for (PLTdata p: pltData) {
-                    ((CorrectorOptimizer) optimizer).boundingBox.add(p.getBoundingBox());
+                    optimizer.boundingBox.add(p.getBoundingBox());
                 }
-                break;
-            case 2:
+                for (int i=0; i<pltData.length; i++) {
+                    optimizers[i] = (CorrectorOptimizer) optimizer.clone();
+                }
+                break; }
+            case 2: {
 //                System.out.println("Ant Colony alghoritm");
-                optimizer = new AntColonyOptimizer();
-                break;
-            case 1:
-                optimizer = new ModifiedGreedyOptimizer();
+                AntColonyOptimizer optimizer = new AntColonyOptimizer();
+                for (int i=0; i<pltData.length; i++) {
+                    optimizers[i] = (AntColonyOptimizer) optimizer.clone();
+                }
+                break; }
+            case 1: {
 //                System.out.println("modified Greedy alghoritm");
-                break;
+                ModifiedGreedyOptimizer optimizer = new ModifiedGreedyOptimizer();
+                for (int i=0; i<pltData.length; i++) {
+                    optimizers[i] = (ModifiedGreedyOptimizer) optimizer.clone();
+                }
+                break; }
             case 0:
-            default:
-                optimizer = new GreedyOptimizer();
+            default: {
 //                System.out.println("Greedy alghoritm");
-                break;
+                GreedyOptimizer optimizer = new GreedyOptimizer();
+                for (int i=0; i<pltData.length; i++) {
+                    optimizers[i] = (GreedyOptimizer) optimizer.clone();
+                }
+                break; }
         }      
-        optimizer.addPropertyChangeListener(parent);
-        optimizer.setSettings(settings);
         System.out.println("optimization before start");
+        progressCalculator.unregisterAll();
         int linesBeforeOptimization = countTotalLines(pltData);
         try {
             optimizedPltData = new PLTdata[pltData.length];
             for (int i=0; i<pltData.length; i++) {
                 if (pen == -1 || pltData[i].getPen() == pen) {
-                    optimizer.setData(pltData[i]);
-                    optimizedPltData[i] = optimizer.optimize();
-                    optimizedPltData[i].addPropertyChangeListener(parent);
+                    optimizers[i].setData(pltData[i]);
+                    optimizers[i].setSettings(settings);
+                    ParentProgressCalculator progCalc = new ParentProgressCalculator();
+                    optimizers[i].setProgressCalculator(progCalc);
+                    progressCalculator.register(progCalc);
+                }
+            }
+            
+            //System.out.println("Optimization - progress calculator (" + progressCalculator.toString() + ") prepared - max = " + progressCalculator.getMax());
+            
+            for (int i=0; i<pltData.length; i++) {
+                if (pen == -1 || pltData[i].getPen() == pen) {
+                    optimizedPltData[i] = optimizers[i].optimize();
                     optimizedPltData[i].calculateStats();
                 } else {
                     optimizedPltData[i] = pltData[i];
@@ -280,7 +300,7 @@ public class PLTfile {
         }
         System.out.println("optimization finished");
         int linesAfterOptimization = countTotalLines(optimizedPltData);
-        if (!optimizer.changesLineCount() && (linesBeforeOptimization != linesAfterOptimization)) {
+        if (!optimizers[0].changesLineCount() && (linesBeforeOptimization != linesAfterOptimization)) {
             JOptionPane.showMessageDialog(null,
                     "Lines count after optimization ("+linesAfterOptimization+") does not match line count before optimization ("+linesBeforeOptimization+").\nSomething is terribly wrong, because the alghoritm should not change count of lines.",
                     "Error: Lines counte before and after optimization does not macth.",
@@ -353,11 +373,6 @@ public class PLTfile {
         
     public void addPropertyChangeListener(PropertyChangeListener listener) {
         propertySupport.addPropertyChangeListener(listener);
-        parent = listener;
-    }
-
-    public void setParent(PropertyChangeListener parent) {
-        this.parent = parent;
     }
 
     public PLTdata[] getPltData() {
@@ -427,4 +442,11 @@ public class PLTfile {
                 return 2*4*10*countLines + 2*4*countPoints + 50*1024*1024;
         }      
     }
+
+    public ParentProgressCalculator getProgressCalculator() {
+        return progressCalculator;
+    }
+    
+    
+
 }

@@ -6,8 +6,6 @@ package plttools;
 
 import java.awt.Point;
 import java.awt.Rectangle;
-import java.beans.PropertyChangeListener;
-import java.beans.PropertyChangeSupport;
 
 /**
  *
@@ -41,13 +39,20 @@ public class PLTdata {
     private PLTdata subPlots[] = new PLTdata[0];
     private int subPlotsCount = 0;
 
-    protected PropertyChangeSupport propertySupport = new PropertyChangeSupport(this);
+    /* 
+     * status things
+     */
+    protected ParentProgressCalculator progress = new ParentProgressCalculator();
     
     public void calculateDistances() {
         float dist;
         distances = new float[pointsCount][pointsCount];
         int i, j, k;
-        propertySupport.firePropertyChange("progressMessage", null, "distance calculation");
+        progress.unregisterAll();
+        ChildrenProgressCalculator distanceProgress = new ChildrenProgressCalculator();
+        progress.register(distanceProgress);
+        distanceProgress.setMessage("distance calculation");
+        distanceProgress.setMax(pointsCount);
         for (i=0; i<pointsCount; i++) {
             distances[i][i] = (float) (2*(boundingBox.getMaxX()+boundingBox.getMaxY()));
             for (j=0; j<i; j++) {
@@ -55,7 +60,7 @@ public class PLTdata {
                 distances[i][j] = dist;
                 distances[j][i] = dist;
             }
-            propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*i)/pointsCount));            
+            distanceProgress.setProgress(i);
         }
         for (i=0; i<subPlotsCount; i++) {
             subPlots[i].calculateDistances();
@@ -69,7 +74,7 @@ public class PLTdata {
 //            }
 //            System.out.println();
 //        }
-        propertySupport.firePropertyChange("progressFinished", false, true);
+        progress.finishedAnnouncement();
     }
 
     public float calculateDistance(int point1, int point2) {
@@ -381,8 +386,8 @@ public class PLTdata {
         return pointsCount;
     }
 
-    public void addPropertyChangeListener(PropertyChangeListener listener) {
-        propertySupport.addPropertyChangeListener(listener);
+    public ParentProgressCalculator getProgressObject() {
+        return progress;
     }
     
     public int[] getLines_1() {
@@ -640,8 +645,18 @@ public class PLTdata {
     
     public void makeSubplotsFromLoops() {
         System.out.println("Making subplot from loops");
-        propertySupport.firePropertyChange("progressMessage", null, "making subplots for pen " + pen);
-        propertySupport.firePropertyChange("progressValue", -1, 0);
+        progress.unregisterAll();
+
+        ChildrenProgressCalculator findLoopsProgress = new ChildrenProgressCalculator();
+        findLoopsProgress.setMax(populatedLines);
+        progress.register(findLoopsProgress);
+
+        ChildrenProgressCalculator makeSublotsProgress = new ChildrenProgressCalculator();
+        makeSublotsProgress.setMax(populatedLines);
+        progress.register(makeSublotsProgress);
+        
+        findLoopsProgress.setMessage("making subplots for pen " + pen);
+        findLoopsProgress.setProgress(0);
         
         int minRequiredArea = 50000; 
 
@@ -732,12 +747,15 @@ public class PLTdata {
                 }
 
                 // advance to next loop
-                propertySupport.firePropertyChange("progressValue", 0, (int) 50*i/populatedLines);
+                findLoopsProgress.setProgress(i);
                 loopCount++;
             }            
         }
 
         // go throught all valid loops found and make subplots from them
+        makeSublotsProgress.setProgress(0);
+        makeSublotsProgress.setScale(populatedLines/loopCount);
+        makeSublotsProgress.setMax(loopCount);
         for (int i=0; i<loopCount; i++) {
             if (validLoop[i]) {
                 setSelection(new int[0]);
@@ -755,9 +773,9 @@ public class PLTdata {
                     makeSubPlotFromSelection();  
                 }
             }
-            propertySupport.firePropertyChange("progressValue", 0, (int) 50+50*i/loopCount);
+            makeSublotsProgress.setProgress(i);
         }
-        propertySupport.firePropertyChange("progressFinished", false, true);        
+        progress.finishedAnnouncement();
     }
 
     public void addSubPlot(PLTdata subplot) {
@@ -769,9 +787,6 @@ public class PLTdata {
     }
     
     public void mergeAllSubplots() {
-        propertySupport.firePropertyChange("progressMessage", null, "merging subplots for pen " + pen);
-        propertySupport.firePropertyChange("progressValue", -1, 0);
-
         // count total number of lines
         int newLinesCount = populatedLines;
         for (PLTdata subplot: subPlots) {
@@ -779,6 +794,14 @@ public class PLTdata {
         }
         System.out.println("Merging all subplots - there will be " + newLinesCount + " new lines.");
         
+        progress.unregisterAll();
+        ChildrenProgressCalculator mergeSublotsProgress = new ChildrenProgressCalculator();
+        progress.register(mergeSublotsProgress);
+        
+        mergeSublotsProgress.setMessage("merging subplots for pen " + pen);
+        mergeSublotsProgress.setMax(newLinesCount);
+        mergeSublotsProgress.setProgress(0);
+
         // keep current arrays for merging process
         byte oldStatus[] = status;
         int oldLines_1[] = lines_1;
@@ -808,7 +831,7 @@ public class PLTdata {
             if (oldLineType[i] < 10) {
                 // just copy the line
                 addLine(oldPoint_x[oldLines_1[i]], oldPoint_y[oldLines_1[i]], oldPoint_x[oldLines_2[i]], oldPoint_y[oldLines_2[i]], oldLineType[i]);
-                propertySupport.firePropertyChange("progressValue", 0, (int) 100*populatedLines/newLinesCount);
+                mergeSublotsProgress.setProgress(populatedLines);
             } else {
                 // copy all lines from subplot
                 PLTdata subplot = subPlots[oldLineType[i]-10];
@@ -820,7 +843,7 @@ public class PLTdata {
                 
                 for (int j=0; j<subplot.getPopulatedLines(); j++) {
                     addLine(SPpoint_x[SPlines_1[j]], SPpoint_y[SPlines_1[j]], SPpoint_x[SPlines_2[j]], SPpoint_y[SPlines_2[j]], SPlineType[j]);                    
-                    propertySupport.firePropertyChange("progressValue", 0, (int) 100*populatedLines/newLinesCount);
+                    mergeSublotsProgress.setProgress(populatedLines);
                 }
             }
         }
@@ -831,6 +854,11 @@ public class PLTdata {
         
         // recalculates statistics
         calculateStats();
-        propertySupport.firePropertyChange("progressFinished", false, true);        
+        progress.finishedAnnouncement();
     }
+
+    public int getSubPlotsCount() {
+        return subPlotsCount;
+    }
+    
 } 

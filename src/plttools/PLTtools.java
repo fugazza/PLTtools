@@ -20,7 +20,6 @@ import javax.swing.BorderFactory;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import javax.swing.SwingWorker;
-import javax.swing.border.EmptyBorder;
 import javax.swing.filechooser.FileFilter;
 import plttools.GUI.PenObject;
 
@@ -30,12 +29,14 @@ import plttools.GUI.PenObject;
  */
 public class PLTtools extends javax.swing.JFrame implements PropertyChangeListener {
 
-    PLTfile pltFile = new PLTfile();
-    SettingsData settings = new SettingsData();
-    ExecutorService executorService;
+    private final PLTfile pltFile = new PLTfile();
+    private final SettingsData settings = new SettingsData();
+    private ExecutorService executorService;
+    private final ParentProgressCalculator progress = new ParentProgressCalculator();
     
     /**
      * Creates new form PLTtools
+     * @param args
      */
     public PLTtools(String args[]) {
         initComponents();
@@ -56,6 +57,8 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
         pltFile.setSettings(settings);
         pLTpanel1.setPlt(pltFile);
         pLTpanel1.addPropertyChangeListener(PLTtools.this);
+        progress.register(pltFile.getProgressCalculator());
+        progress.addPropertyChangeListener(PLTtools.this);
         executorService = Executors.newSingleThreadExecutor();
         if (args.length > 0) {
             File f = new File(args[0]);
@@ -577,7 +580,7 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
                     System.out.println("currentJar = " + currentJar);                    
 
                     /* Build command: java -jar application.jar */
-                    final ArrayList<String> command = new ArrayList<String>();
+                    final ArrayList<String> command = new ArrayList<>();
                     command.add(javaBin);
                     int newMemory = Math.round(2f*pltFile.getRequiredMemory(alghoritmComboBox.getSelectedIndex())/1024/1024);
                     command.add("-Xmx"+newMemory+"m");
@@ -618,6 +621,8 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
                 @Override
                 protected Void doInBackground() throws Exception {
                     try {
+                        progress.unregisterAll();
+                        progress.register(pltFile.getProgressCalculator());
                         pltFile.optimizePLT(alghoritmComboBox.getSelectedIndex(),((PenObject) jComboBox1.getSelectedItem()).getNum());
                     } catch (OutOfMemoryError e) {
                         JOptionPane.showMessageDialog(null, "Insufficient memory to perform optimization, the optimization did not run.", "Insufficient memory", JOptionPane.ERROR_MESSAGE);
@@ -675,53 +680,68 @@ public class PLTtools extends javax.swing.JFrame implements PropertyChangeListen
 
     @Override
     public void propertyChange(PropertyChangeEvent evt) {
-        if (evt.getPropertyName().equals("fileRead")) {
-            System.out.println("reader: file read");
-            pLTpanel1.setPlt(pltFile);   
-            fillComboBoxWithPens();
-            displayPLTStats();
-        } else if (evt.getPropertyName().equals("progressValue")) {
-            jProgressBar1.setValue((Integer) evt.getNewValue());
-        } else if (evt.getPropertyName().equals("progressMessage")) {
-            jProgressBar1.setString((String) evt.getNewValue());
-        } else if (evt.getPropertyName().equals("progressFinished")) {
-            jProgressBar1.setValue(0);
-            jProgressBar1.setString("Ready");
-            displayPLTStats();
-        } else if (evt.getPropertyName().equals("makeSubplotsRequest")) {
-            if (pltFile != null && pltFile.getPltData() != null) {
-                SwingWorker sw = new SwingWorker<Void, Void>() {
-
-                    @Override
-                    protected Void doInBackground() throws Exception {
-                        for (PLTdata p: pltFile.getPltData()) {
-                            p.addPropertyChangeListener(PLTtools.this);
-                            p.makeSubplotsFromLoops();
-                            pLTpanel1.repaint();
+        switch (evt.getPropertyName()) {
+            case "fileRead":
+                System.out.println("reader: file read");
+                pLTpanel1.setPlt(pltFile);
+                fillComboBoxWithPens();
+                displayPLTStats();
+                break;
+            case "progressValue":
+                System.out.println("new progress: " + progress.progressPercentage());
+                jProgressBar1.setValue(progress.progressPercentage());
+                break;
+            case "progressMessage":
+                //System.out.println("Progress messages received: " + (String) evt.getNewValue());
+                jProgressBar1.setString((String) evt.getNewValue());
+                break;
+            case "progressFinished":
+                jProgressBar1.setValue(0);
+                jProgressBar1.setString("Ready");
+                displayPLTStats();
+                break;
+            case "makeSubplotsRequest":
+                if (pltFile != null && pltFile.getPltData() != null) {
+                    SwingWorker sw = new SwingWorker<Void, Void>() {
+                        
+                        @Override
+                        protected Void doInBackground() throws Exception {
+                            progress.unregisterAll();
+                            for (PLTdata p: pltFile.getPltData()) {
+                                progress.register(p.getProgressObject());
+                            }
+                            for (PLTdata p: pltFile.getPltData()) {
+                                p.makeSubplotsFromLoops();
+                                pLTpanel1.repaint();
+                            }
+                            return null;
                         }
-                        return null;
-                    }
-
-                };
-                executorService.submit(sw);            
-           }                    
-        } else if (evt.getPropertyName().equals("mergeSubplotsRequest")) {
-            if (pltFile != null && pltFile.getPltData() != null) {
-                SwingWorker sw = new SwingWorker<Void, Void>() {
-
-                    @Override
-                    protected Void doInBackground() throws Exception {
-                        for (PLTdata p: pltFile.getPltData()) {
-                            p.addPropertyChangeListener(PLTtools.this);
-                            p.mergeAllSubplots();
-                            pLTpanel1.repaint();
+                        
+                    };
+                    executorService.submit(sw);
+                }    break;
+            case "mergeSubplotsRequest":
+                if (pltFile != null && pltFile.getPltData() != null) {
+                    SwingWorker sw = new SwingWorker<Void, Void>() {
+                        
+                        @Override
+                        protected Void doInBackground() throws Exception {
+                            progress.unregisterAll();
+                            for (PLTdata p: pltFile.getPltData()) {
+                                progress.register(p.getProgressObject());
+                            }
+                            for (PLTdata p: pltFile.getPltData()) {
+                                p.mergeAllSubplots();
+                                pLTpanel1.repaint();
+                            }
+                            return null;
                         }
-                        return null;
-                    }
-
-                };
-                executorService.submit(sw);            
-           }                    
+                        
+                    };
+                    executorService.submit(sw);
+                }    break;
+            default:
+                break;                    
         }
     }
 

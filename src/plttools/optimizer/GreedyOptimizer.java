@@ -4,20 +4,33 @@
  */
 package plttools.optimizer;
 
+import plttools.ChildrenProgressCalculator;
 import plttools.PLTdata;
+import plttools.ParentProgressCalculator;
 
 /**
  *
  * @author vlada
  */
 public class GreedyOptimizer extends AbstractOptimizer {
+    private final ChildrenProgressCalculator optimizationProgress = new ChildrenProgressCalculator();
+    private GreedyOptimizer[] subPlotOptimizers;
 
     @Override
     public PLTdata optimize() {
-        propertySupport.firePropertyChange("progressMessage", null, "greedy optimization");
+        progress.setMessage("greedy optimization");
         PLTdata p = new PLTdata();
-        p.addPropertyChangeListener(propertySupport.getPropertyChangeListeners()[0]);
-        p.setPen(pd.getPen());        
+        p.setLineCount(pd.getPopulatedLines());
+        p.setPen(pd.getPen()); 
+        // optimize all subplots first
+        for (GreedyOptimizer optimizer: subPlotOptimizers) {
+            System.out.println("optimization of subplot start");
+            PLTdata optimizedSubPlot;
+            optimizedSubPlot = optimizer.optimize();
+            optimizedSubPlot.calculateStats();
+            p.addSubPlot(optimizedSubPlot);
+        }
+        
         pd.calculateDistances();
         int numLinesProcessed = 0;
         int numPointsProcessed = 0;
@@ -26,7 +39,6 @@ public class GreedyOptimizer extends AbstractOptimizer {
         int minPoint = 0;
         double minDist;
         int i, j;
-        p.setLineCount(pd.getPopulatedLines());
         int numEvaluatedPoints = 2*pd.getPopulatedLines();
         int pocetBodu = pd.getPointsCount();
         byte passThroughPointLeft[] = new byte[pocetBodu];
@@ -51,7 +63,7 @@ public class GreedyOptimizer extends AbstractOptimizer {
         
         // connect all other points        
         while (numPointsProcessed < numEvaluatedPoints && numLinesProcessed < pd.getPopulatedLines()) {
-            propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*numPointsProcessed)/numEvaluatedPoints));                            
+            optimizationProgress.setProgress(numPointsProcessed);
             System.out.println("last point: "+lastPoint+"["+pd.getPoint_x()[lastPoint]+","+pd.getPoint_y()[lastPoint]+"]");
             minDist = 2*(pd.getBoundingBox().getWidth()+pd.getBoundingBox().getHeight());
             for(i=0; i<pd.getPointsCount(); i++) {
@@ -92,7 +104,7 @@ public class GreedyOptimizer extends AbstractOptimizer {
         }
         System.out.println("total lines = "+pd.getPopulatedLines() + "; num of processed lines = "+numLinesProcessed+ "; num of processed points = "+numPointsProcessed);
         p.calculateStats();
-        propertySupport.firePropertyChange("progressFinished", false, true);
+        progress.finishedAnnouncement();
         return p;
     }
    
@@ -101,4 +113,34 @@ public class GreedyOptimizer extends AbstractOptimizer {
         return false;
     }
 
+    @Override
+    public Object clone() {
+        GreedyOptimizer clon;
+        try {
+            clon = (GreedyOptimizer) super.clone();
+        } catch (CloneNotSupportedException ex) {
+            clon = new GreedyOptimizer();
+        }
+        clon.settings = this.settings;
+        return clon;
+    }     
+
+    @Override
+    protected void prepareProgressCalculators() {
+        if (pd != null) {
+            optimizationProgress.setMax(2*pd.getPopulatedLines());
+            subPlotOptimizers = new GreedyOptimizer[pd.getSubPlotsCount()];
+            int ii=0;
+            for (PLTdata subPlot: pd.getSubPlots()) {
+                GreedyOptimizer optimizer = (GreedyOptimizer) this.clone();
+                optimizer.setData(subPlot);
+                subPlotOptimizers[ii++] = optimizer;  
+                ParentProgressCalculator progCalc = new ParentProgressCalculator();
+                progress.register(progCalc);
+                optimizer.setProgressCalculator(progCalc);
+            }
+        } else {
+            optimizationProgress.setMax(100);
+        }
+        progress.register(optimizationProgress);    }
 }

@@ -6,7 +6,9 @@ package plttools.optimizer;
 
 import java.awt.Point;
 import java.awt.Rectangle;
+import plttools.ChildrenProgressCalculator;
 import plttools.PLTdata;
+import plttools.ParentProgressCalculator;
 
 /**
  *
@@ -15,10 +17,13 @@ import plttools.PLTdata;
 public class CorrectorOptimizer extends AbstractOptimizer {
 
     public Rectangle boundingBox;
+    private final ChildrenProgressCalculator optimizationProgress = new ChildrenProgressCalculator();
+    private final ChildrenProgressCalculator connectionPointsProgress = new ChildrenProgressCalculator();
+    private CorrectorOptimizer[] subPlotOptimizers;
     
     @Override
     public PLTdata optimize() {
-        propertySupport.firePropertyChange("progressMessage", null, "correction started");
+        progress.setMessage("correction started");
         int debugLine = settings.getCorrectorDebugLine();
         float limitAngle = settings.getCorrectorLimitAngle(); // degrees
         int offsetX = 0;
@@ -26,22 +31,13 @@ public class CorrectorOptimizer extends AbstractOptimizer {
         PLTdata p = new PLTdata();
         p.setLineCount((int) (pd.getPopulatedLines()*1.5));
         p.setPen(pd.getPen());
-        p.addPropertyChangeListener(propertySupport.getPropertyChangeListeners()[0]);
 
         // optimize all subplots first
-        for (PLTdata subPlot: pd.getSubPlots()) {
-            CorrectorOptimizer optimizer = new CorrectorOptimizer();
-            optimizer.addPropertyChangeListener(propertySupport.getPropertyChangeListeners()[0]);
-            optimizer.setSettings(settings);
-            optimizer.boundingBox = this.boundingBox;
+        for (CorrectorOptimizer optimizer: subPlotOptimizers) {
             System.out.println("optimization of subplot start");
-            optimizer.setData(subPlot);
-            
             PLTdata optimizedSubPlot;
             optimizedSubPlot = optimizer.optimize();
-            optimizedSubPlot.addPropertyChangeListener(propertySupport.getPropertyChangeListeners()[0]);
             optimizedSubPlot.calculateStats();
-            
             p.addSubPlot(optimizedSubPlot);
         }
         
@@ -72,8 +68,8 @@ public class CorrectorOptimizer extends AbstractOptimizer {
             
             // go through all lines
             for(i=0; i<pd.getPopulatedLines();i++) {
-                propertySupport.firePropertyChange("progressMessage", null, "Searching duplicities for line #"+i);
-                propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*i)/pd.getPopulatedLines()));                            
+                optimizationProgress.setMessage("Searching duplicities for line #"+i);
+                optimizationProgress.setProgress(i);
                 l1_1 = pd.getLines_1()[i];
                 l1_2 = pd.getLines_2()[i];
                 x1_1 = pd.getPoint_x()[l1_1];
@@ -272,9 +268,10 @@ public class CorrectorOptimizer extends AbstractOptimizer {
             p.calculateStats();
 
             // connect all ENDpoints that are closer to each other than threshold
-            propertySupport.firePropertyChange("progressMessage", null, "connecting close endpoints");
+            connectionPointsProgress.setMessage("connecting close endpoints");
+            connectionPointsProgress.setMax(p.getPointsCount());
             for(i=0; i<p.getPointsCount(); i++) {
-                propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*i)/p.getPointsCount()));                            
+                connectionPointsProgress.setProgress(i);
 //                System.out.println("Status of point #" + i + " = " + p.getStatusAtPoint(i));
                 for(j=i+1; j<p.getPointsCount(); j++) {
                     if((p.getDistance(i, j) < threshold) 
@@ -294,9 +291,9 @@ public class CorrectorOptimizer extends AbstractOptimizer {
             return p;
         } else if (settings.getCorrectorMoveToOrigin()) {
             int x1, y1, x2, y2;
-            propertySupport.firePropertyChange("progressMessage", null, "moving plot");
+            optimizationProgress.setMessage("moving plot");
             for(int i=0; i< pd.getPopulatedLines(); i++) {
-                propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*i)/pd.getPopulatedLines()));                            
+                optimizationProgress.setProgress(i);
                 x1 = pd.getPoint_x()[pd.getLines_1()[i]] - offsetX;
                 y1 = pd.getPoint_y()[pd.getLines_1()[i]] - offsetY;
                 x2 = pd.getPoint_x()[pd.getLines_2()[i]] - offsetX;
@@ -319,6 +316,45 @@ public class CorrectorOptimizer extends AbstractOptimizer {
     @Override
     public boolean changesLineCount() {
         return true;
+    }
+
+    @Override
+    protected void prepareProgressCalculators() {
+        if (pd != null) {
+            //System.out.println("corrector optimizer - progress calculators - ok, pd is not null");
+            optimizationProgress.setMax(pd.getPopulatedLines());
+            connectionPointsProgress.setMax(pd.getPointsCount());
+            subPlotOptimizers = new CorrectorOptimizer[pd.getSubPlotsCount()];
+            int ii=0;
+            for (PLTdata subPlot: pd.getSubPlots()) {
+                CorrectorOptimizer optimizer = (CorrectorOptimizer) this.clone();
+                optimizer.setData(subPlot);
+                subPlotOptimizers[ii++] = optimizer;  
+                ParentProgressCalculator progCalc = new ParentProgressCalculator();
+                progress.register(progCalc);
+                optimizer.setProgressCalculator(progCalc);
+            }
+        } else {
+            //System.out.println("corrector optimizer - progress calculators (" + progress.toString() + ") - ERROR, pd is NULL");
+            optimizationProgress.setMax(100);
+            connectionPointsProgress.setMax(100);
+        }
+        progress.register(optimizationProgress);
+        progress.register(connectionPointsProgress);
+        //System.out.println("corrector optimizer - progress calculators (" + progress.toString() + ") prepared - max = " + progress.getMax());
+    }
+
+    @Override
+    public Object clone() {
+        CorrectorOptimizer clon;
+        try {
+            clon = (CorrectorOptimizer) super.clone();
+        } catch (CloneNotSupportedException ex) {
+            clon = new CorrectorOptimizer();
+        }
+        clon.settings = this.settings;
+        clon.boundingBox = (Rectangle) this.boundingBox.clone();
+        return clon;
     }
     
 }

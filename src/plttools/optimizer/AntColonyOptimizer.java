@@ -5,7 +5,9 @@
 package plttools.optimizer;
 
 import java.text.DecimalFormat;
+import plttools.ChildrenProgressCalculator;
 import plttools.PLTdata;
+import plttools.ParentProgressCalculator;
 
 /**
  *
@@ -13,16 +15,31 @@ import plttools.PLTdata;
  */
 public class AntColonyOptimizer extends AbstractOptimizer {
 
+    private ParentProgressCalculator[] optimizationProgress;
+    private ChildrenProgressCalculator[] attractivityProgress;
+    private ChildrenProgressCalculator[] antRunProgress;
+    private ChildrenProgressCalculator[] pheromonesProgress;
+    private ChildrenProgressCalculator finalPathProgress;
+    private AntColonyOptimizer[] subPlotOptimizers;
+
     private float pheromones[][];
             
     @Override
     public PLTdata optimize() {
 //        System.out.println("optimization started");
-        propertySupport.firePropertyChange("progressMessage", null, "optimization started");
+        progress.setMessage("ant colony optimization started");
 //        System.out.println("property fired");
         PLTdata p = new PLTdata();
         p.setPen(pd.getPen());
-        p.addPropertyChangeListener(propertySupport.getPropertyChangeListeners()[0]);
+        // optimize all subplots first
+        for (AntColonyOptimizer optimizer: subPlotOptimizers) {
+            System.out.println("optimization of subplot start");
+            PLTdata optimizedSubPlot;
+            optimizedSubPlot = optimizer.optimize();
+            optimizedSubPlot.calculateStats();
+            p.addSubPlot(optimizedSubPlot);
+        }
+        
         pd.calculateDistances();
 //        System.out.println("distances calculated");
         int numProcessed;
@@ -47,9 +64,9 @@ public class AntColonyOptimizer extends AbstractOptimizer {
         int numEvaluatedPoints = 2*pd.getLinesCount();
         int antsCount = settings.getAntCount();
         for (k=0; k<antsCount; k++) {
-            propertySupport.firePropertyChange("progressMessage", null, "Ant "+(k+1)+" from "+(antsCount)+"is running");
+            attractivityProgress[k].setMessage("Ant "+(k+1)+" from "+(antsCount)+"is running");
             // generate attractivity matrix
-            propertySupport.firePropertyChange("progressMessage", null, "Ant "+(k+1)+" from "+(antsCount)+" calculating attraction");
+            attractivityProgress[k].setMessage("Ant "+(k+1)+" from "+(antsCount)+" calculating attraction");
 //            DecimalFormat format = new DecimalFormat("#####.##");
 //            System.out.println("Attractivity:");
             for (i=0; i<pocetBodu;i++) {
@@ -64,7 +81,7 @@ public class AntColonyOptimizer extends AbstractOptimizer {
 //                    System.out.print(format.format(attractivity[i][j]) + "\t");
                 }
 //                System.out.println();
-                propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*i)/pocetBodu));                            
+                attractivityProgress[k].setProgress(i);
             }
 
             // generate ant path
@@ -81,7 +98,7 @@ public class AntColonyOptimizer extends AbstractOptimizer {
             System.out.println("Ant "+k+"; startpoint = "+lastPoint + " ["+pd.getPoint_x()[lastPoint]+";"+pd.getPoint_y()[lastPoint]+"]");
             antPath[0] = lastPoint;
             numProcessed = 1;
-            propertySupport.firePropertyChange("progressMessage", null, "Ant "+(k+1)+" from "+(antsCount)+" running through lines");
+            antRunProgress[k].setMessage("Ant "+(k+1)+" from "+(antsCount)+" running through lines");
             while (numProcessed < numEvaluatedPoints) {
                 maxAttractivity = 0.0;
                 for(i=0; i<pocetBodu; i++) {
@@ -101,7 +118,7 @@ public class AntColonyOptimizer extends AbstractOptimizer {
                 attractivity[lastPoint][nextPoint] = 0;
                 attractivity[nextPoint][lastPoint] = 0;
                 lastPoint = nextPoint;
-                propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*numProcessed)/pocetBodu));                            
+                antRunProgress[k].setProgress(numProcessed);
             }
 //            System.out.println();
 //            System.out.println("ant path runs throuhg "+numProcessed+" points");
@@ -126,17 +143,17 @@ public class AntColonyOptimizer extends AbstractOptimizer {
             double pheromoneUnit = (pd.getTravelsLength() / antPathLength )-1;
             System.out.println("pheromone increase = " + pheromoneUnit);
             int r,s;
-            propertySupport.firePropertyChange("progressMessage", null, "Ant "+(k+1)+" from "+(antsCount)+" deposing pheromones");
+            pheromonesProgress[k].setMessage("Ant "+(k+1)+" from "+(antsCount)+" deposing pheromones");
             for (i=1; i<pocetBodu; i++) {
                 r = antPath[i];
                 s = antPath[i-1];
                 pheromone = (float) (pheromones[r][s] + pheromoneUnit);
                 pheromones[r][s] = pheromone;
                 pheromones[s][r] = pheromone;
-                propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*i)/pocetBodu));                            
+                pheromonesProgress[k].setProgress(i);
             }
         }
-        propertySupport.firePropertyChange("progressMessage", null, "Generating final path.");
+        finalPathProgress.setMessage("Generating final path.");
         p.setLineCount(pd.getLinesCount());
         Boolean linesFound[] = new Boolean[pd.getLinesCount()];
         for (i=0; i<pd.getLinesCount(); i++) {
@@ -163,7 +180,7 @@ public class AntColonyOptimizer extends AbstractOptimizer {
                     break;
                 }  
             }
-            propertySupport.firePropertyChange("progressValue", 0, (int) ((100.0*i)/pocetBodu));                            
+            finalPathProgress.setProgress(i);
         }
         
         for (i=0; i<pd.getLinesCount(); i++) {
@@ -202,4 +219,63 @@ public class AntColonyOptimizer extends AbstractOptimizer {
         return false;
     }
 
+    @Override
+    public Object clone() {
+        AntColonyOptimizer clon;
+        try {
+            clon = (AntColonyOptimizer) super.clone();
+        } catch (CloneNotSupportedException ex) {
+            clon = new AntColonyOptimizer();
+        }
+        clon.settings = this.settings;
+        return clon;
+    }     
+
+    @Override
+    protected void prepareProgressCalculators() {
+        optimizationProgress = new ParentProgressCalculator[settings.getAntCount()];
+        attractivityProgress = new ChildrenProgressCalculator[settings.getAntCount()];
+        antRunProgress = new ChildrenProgressCalculator[settings.getAntCount()];
+        pheromonesProgress = new ChildrenProgressCalculator[settings.getAntCount()];
+
+        if (pd != null) {
+            subPlotOptimizers = new AntColonyOptimizer[pd.getSubPlotsCount()];
+            int ii=0;
+            for (PLTdata subPlot: pd.getSubPlots()) {
+                ParentProgressCalculator subPlotProgressCalculator = new ParentProgressCalculator();
+                AntColonyOptimizer optimizer = (AntColonyOptimizer) this.clone();
+                optimizer.setData(subPlot);
+                subPlotOptimizers[ii++] = optimizer;  
+                progress.register(subPlotProgressCalculator);
+                optimizer.setProgressCalculator(subPlotProgressCalculator);
+
+                for (int i=0; i<optimizationProgress.length; i++) {
+                    optimizationProgress[i] = new ParentProgressCalculator();
+                    progress.register(optimizationProgress[i]);        
+                    attractivityProgress[i] = new ChildrenProgressCalculator();
+                    attractivityProgress[i].setMax(pd.getPointsCount());
+                    optimizationProgress[i].register(attractivityProgress[i]);
+                    antRunProgress[i] = new ChildrenProgressCalculator();
+                    antRunProgress[i].setMax(pd.getPointsCount());
+                    optimizationProgress[i].register(antRunProgress[i]);
+                    pheromonesProgress[i] = new ChildrenProgressCalculator();
+                    pheromonesProgress[i].setMax(pd.getPointsCount());
+                    optimizationProgress[i].register(pheromonesProgress[i]);
+                    
+                }
+                finalPathProgress = new ChildrenProgressCalculator();
+                finalPathProgress.setMax(pd.getPointsCount());
+                progress.register(finalPathProgress);
+            }
+        } else {
+            for (ParentProgressCalculator pc: optimizationProgress) {
+                ParentProgressCalculator optProg = new ParentProgressCalculator();
+                ChildrenProgressCalculator childProg = new ChildrenProgressCalculator();
+                childProg.setMax(100);
+                optProg.register(childProg);
+                pc = optProg;
+                progress.register(pc);        
+            }
+        }
+    }
 }
